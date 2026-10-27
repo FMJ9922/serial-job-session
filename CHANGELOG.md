@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.1.4 — 2026-10-28
+
+修复仅影响测试脚本的问题：`npm run smoke:stdin` 写死 `const python = 'python'`，在 `python` 指向 2.7 的机器上自己踩中了它要防的坑（`future feature annotations is not defined`）。
+
+- `dsh/index.js` 导出 `resolvePython()`：与 `sjs` 工具共用同一套候选顺序（设置 → `SJS_PYTHON` → `python3` / `python` / `py`）和同一个 3.11+ 版本门。
+- `dsh/smoke-stdin.mjs` 改用它；失败时会列出每个候选被拒的原因，成功时打印实际解释器与版本。
+- 实测：把 `C:\Python27` 放到 PATH 最前（`python` = 2.7.16）后 `smoke:stdin` 仍通过（回退到 `py`，3.11.9）；`SJS_PYTHON=C:\Python27\python.exe` 会被明确拒绝并说明原因。
+- 运行时路径本来就有版本门，本次不改行为，只让冒烟脚本复用同一逻辑。
+
 ## 5.1.3 — 2026-10-28
 
 修复 cp936（GBK 控制台）下 `sjs` 工具传中文 payload 直接崩溃。

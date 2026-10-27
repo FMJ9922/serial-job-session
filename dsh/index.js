@@ -500,6 +500,20 @@ async function resolveInterpreter(candidates, signal, timeoutMs) {
 }
 
 /**
+ * Resolve the interpreter a tool call would use, for callers outside `apply`
+ * (the smoke scripts). Same precedence as the tool — settings, `SJS_PYTHON`,
+ * then `python3` / `python` / `py` — and the same Python 3.11+ gate, so a script
+ * cannot drift onto a Python 2 that happens to be named `python`.
+ *
+ * @param {{ python?: string, signal?: AbortSignal, timeoutMs?: number }} [options] stored setting and bounds.
+ * @returns {Promise<{ executable: string, version: string }>} the interpreter and its version.
+ */
+export async function resolvePython(options = {}) {
+  const { python = '', signal, timeoutMs = 30_000 } = options
+  return resolveInterpreter(pythonCandidates({ python }), signal, timeoutMs)
+}
+
+/**
  * Resolve the calling session's working directory, so relative `--instance`
  * paths mean what the user sees in the chat.
  *

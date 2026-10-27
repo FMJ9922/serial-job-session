@@ -20,20 +20,20 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { pythonEnv } from './index.js'
+import { pythonEnv, resolvePython } from './index.js'
 
 const PLUGIN_DIR = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(PLUGIN_DIR, '..')
 const CLI = path.join(ROOT, 'scripts', 'sjs.py')
-const python = process.env.SJS_PYTHON || 'python'
 
 /**
  * Run the CLI once with `init --dry-run` and a Chinese payload on stdin.
  *
+ * @param {string} interpreter resolved Python executable.
  * @param {string} instance instance path passed to `init`.
  * @returns {Promise<{ code: number|null, stdout: string, stderr: string }>} outcome.
  */
-function runInit(instance) {
+function runInit(interpreter, instance) {
   const payload = JSON.stringify({
     route_key: '中文探针',
     goal: '验证中文 stdin 解码：任务、方向与验收标准都要能正常读写',
@@ -42,7 +42,7 @@ function runInit(instance) {
     modules: { estimates: false, feishu: false },
   })
   return new Promise((resolve) => {
-    const child = spawn(python, [CLI, 'init', '--instance', instance, '--input', '-', '--dry-run'], {
+    const child = spawn(interpreter, [CLI, 'init', '--instance', instance, '--input', '-', '--dry-run'], {
       cwd: ROOT,
       windowsHide: true,
       env: pythonEnv(),
@@ -66,14 +66,17 @@ function runInit(instance) {
 
 const workspace = mkdtempSync(path.join(tmpdir(), 'sjs-stdin-'))
 try {
-  const outcome = await runInit(path.join(workspace, 'demo'))
+  const interpreter = await resolvePython()
+  const outcome = await runInit(interpreter.executable, path.join(workspace, 'demo'))
   assert.equal(outcome.code, 0, `init exited ${outcome.code}: ${outcome.stderr || outcome.stdout}`)
   const parsed = JSON.parse(outcome.stdout)
   assert.equal(parsed.ok, true, `init reported: ${outcome.stdout}`)
   assert.equal(parsed.dry_run, true)
   assert.equal(parsed.config.goal.includes('中文'), true, 'the goal must survive UTF-8 round-tripping')
   assert.equal(parsed.config.route_key, '中文探针')
-  console.log('smoke:stdin OK — Chinese payload round-tripped through stdin (chcp-independent).')
+  console.log(
+    `smoke:stdin OK — Chinese payload round-tripped through stdin with ${interpreter.executable} (${interpreter.version}), chcp-independent.`,
+  )
 } finally {
   rmSync(workspace, { recursive: true, force: true })
 }

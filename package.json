@@ -1,6 +1,6 @@
 {
   "name": "dsh-serial-job-session",
-  "version": "5.1.3",
+  "version": "5.1.4",
   "description": "Contract-and-evidence workflow for long AI tasks: the serial-job-session v5 skill, an `sjs` tool that runs its local CLI, and a settings panel for interpreter, timeout and extra arguments.",
   "type": "module",
   "license": "MIT",
