@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "串行任务会话",
+    "description": "把 serial-job-session v5 工作流接入 Harness：注册为 skill，并新增 `sjs` 工具调用本地 CLI（init / context / apply / check / recover）。"
+  }
+}

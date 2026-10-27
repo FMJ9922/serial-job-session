@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- 新增 DSH bundle：根 `package.json` 声明 `dsh.bundle.patch`，`dsh/index.js` 把 `SKILL.md` 注册为 Harness skill `serial-job-session` 并新增 `sjs` 工具（在会话工作目录调用 `scripts/sjs.py`，JSON 走 stdin）。
+- 插件显示信息：`dsh/locale/{en,zh}.json` 与 `dsh/icon.svg`；离线校验 `dsh/plugin.test.mjs`（`node --test`）。
+- `check_skill_integrity.py` 排除 `dsh/`、`node_modules/` 与根 `package.json`，插件打包文件不计入 skill 文本基线；基线随本次维护更新。
+- 文档补充 DSH 安装方式与三项差异（勿与 `~/.dsh/skills` 混装、默认允许模型按需加载、`SJS_*` 环境变量）；CI 增加 Node 语法与插件测试。
+
 ## 5.0.0 — 2026-10-27
 
 - 共享模板加轻量实例：四个初始数据文件、两条追加式 JSONL 日志、可重建快照及可配置分片；不再复制领域包、协议或 Markdown 卡片。

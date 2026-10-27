@@ -1,0 +1,6 @@
+# DSH profile bundle patch: one Host row adds the serial-job-session skill and
+# the `sjs` tool. Rows are inserted by the bundle installation; a profile-level
+# override can disable this row without removing the package.
+- insert:
+    - id: serial-job-session
+      name: dsh-serial-job-session

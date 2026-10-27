@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Serial Job Session",
+    "description": "Adds the serial-job-session v5 workflow as a Harness skill and an `sjs` tool that runs its local CLI (init / context / apply / check / recover)."
+  }
+}

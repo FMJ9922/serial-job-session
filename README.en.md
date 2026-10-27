@@ -18,6 +18,27 @@ At creation, ask only for missing choices: manual / conditional / full AI; condi
 
 Examples: [manual](examples/manual.json), [conditional](examples/conditional.json), [full AI](examples/full-ai.json). Their paths, thresholds and budgets are examples, not universal authorization. Host routing must explicitly invoke the skill; see [installation](INSTALL.md).
 
+## Install as a DSH (DeepSeek Harness) bundle
+
+This repository is also a **DSH bundle**. When installed it registers `SKILL.md` as the Harness skill `serial-job-session` (the repository root stays its resource base) and adds an `sjs` tool that runs `scripts/sjs.py` inside the calling session's working directory, so callers never deal with the checkout path or the interpreter location. Every daily subcommand — `init`, `context`, `start`, `apply`, `check`, `recover` and the rest — is reachable through that one tool.
+
+Pick one installation (do not mix them):
+
+- Local directory, for development and live edits: `dsh plugin add <absolute path of this repository>`, or have an agent call `plugin_manager` `install_bundle` with that path as `target`.
+- From GitHub: `dsh plugin add github:FMJ9922/serial-job-session`.
+
+After installation the Plugins page lists **Serial Job Session**, new sessions advertise `serial-job-session`, and the `sjs` tool is available. Python 3.11+ is required; set `SJS_PYTHON` when `python` is not on `PATH`, and `SJS_TIMEOUT_MS` to change the per-call timeout (default 120000 ms).
+
+Three differences from a plain skill install:
+
+1. **Do not also copy or clone this repository into `~/.dsh/skills` or a project `.dsh/skills`.** A same-named filesystem entry shadows the bundle registration — measured here: the filesystem copy registered first, won the name, and shipped `disable-model-invocation: true`, so the model catalog never saw the skill. Keep exactly one installation.
+2. The bundle registration permits model invocation by default (`invocation.modelInvocable: true`). That intentionally relaxes the `disable-model-invocation: true` written for filesystem hosts; set `SJS_MODEL_INVOCABLE=false` in the Host environment before starting DSH to keep the stricter user-only policy.
+3. The bundle is only glue: `dsh/index.js` (Host half), `dsh/cordis.patch.yml` (inserted row), `dsh/locale/{en,zh}.json` and `dsh/icon.svg` (Plugins page), and `dsh/plugin.test.mjs` (offline checks via `node --test dsh/plugin.test.mjs`). `scripts/`, `references/` and `schemas/` stay the single source of truth.
+
+Model invocation is on by default because the Harness catalog *is* its on-demand loading path, and the entry description already restricts use to an explicit name, a `route_key：意图` phrase, or an already-bound workflow. Turn it off with the switch above if you want invocation to stay strictly human.
+
+Maintenance note: `check_skill_integrity.py` excludes `dsh/`, `node_modules/` and the root `package.json` from the skill-text baseline, so bundle packaging never counts as skill content.
+
 ## Instance layout
 
 ```text

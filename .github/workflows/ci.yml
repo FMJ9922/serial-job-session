@@ -23,3 +23,10 @@ jobs:
         run: python -m unittest discover -s Test/serial-job-session -p "test*.py"
       - name: Skill integrity
         run: python scripts/check_skill_integrity.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: DSH bundle syntax
+        run: node --check dsh/index.js
+      - name: DSH bundle tests
+        run: node --test dsh/plugin.test.mjs

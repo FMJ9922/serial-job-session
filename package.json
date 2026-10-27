@@ -1,0 +1,55 @@
+{
+  "name": "dsh-serial-job-session",
+  "version": "5.0.0",
+  "description": "DSH bundle for serial-job-session v5: the skill plus an `sjs` tool that runs its local CLI.",
+  "type": "module",
+  "license": "MIT",
+  "author": "沈劢 (shenmai@taiyouxi.cn)",
+  "homepage": "https://github.com/FMJ9922/serial-job-session",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FMJ9922/serial-job-session.git"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "skill",
+    "workflow",
+    "serial-job-session"
+  ],
+  "exports": {
+    ".": "./dsh/index.js",
+    "./locale/*.json": "./dsh/locale/*.json",
+    "./icon": "./dsh/icon.svg"
+  },
+  "files": [
+    "dsh/index.js",
+    "dsh/cordis.patch.yml",
+    "dsh/locale/*.json",
+    "dsh/icon.svg",
+    "dsh/plugin.test.mjs",
+    "scripts/**/*.py",
+    "references/*.md",
+    "schemas/*.json",
+    "examples/*.json",
+    "SKILL.md",
+    "INSTALL.md",
+    "README.md",
+    "README.en.md",
+    "CHANGELOG.md",
+    "CREDITS.md",
+    "LICENSE",
+    "VERSION",
+    "defaults.json",
+    "roles.json"
+  ],
+  "scripts": {
+    "test:plugin": "node --test dsh/plugin.test.mjs",
+    "check:plugin": "node --check dsh/index.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./dsh/cordis.patch.yml"
+    }
+  }
+}

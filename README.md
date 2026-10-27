@@ -30,6 +30,27 @@ python scripts/sjs.py context --instance <project>/.cursor/workflows/demo
 
 标准口令为 `route_key：意图`，如 `界面优化：推进`。宿主必须显式加载本 skill 或转发口令；`disable-model-invocation: true` 的含义见 [安装说明](INSTALL.md)。
 
+## 在 DSH（DeepSeek Harness）中安装
+
+本仓同时是一个 **DSH bundle**：安装后它把 `SKILL.md` 注册成名为 `serial-job-session` 的 skill（资源根仍是本仓目录），并新增 `sjs` 工具，在**当前会话工作目录**里调用 `scripts/sjs.py`。因此不需要再关心仓库绝对路径和 Python 解释器位置，`init / context / start / apply / check / recover` 等子命令都能直接调。
+
+安装方式二选一（**不要同时用**）：
+
+- 本地目录（开发、跟随本仓改动）：在 DSH 里执行 `dsh plugin add <本仓绝对路径>`，或让 agent 调 `plugin_manager` 的 `install_bundle`，target 填本仓绝对路径。
+- 从 GitHub：`dsh plugin add github:FMJ9922/serial-job-session`。
+
+安装后可以在插件页看到「串行任务会话」，新会话的 skill 目录出现 `serial-job-session`，`sjs` 工具可用。依赖 Python 3.11+；`python` 不在 PATH 时用环境变量 `SJS_PYTHON` 指定解释器，`SJS_TIMEOUT_MS` 调整单次调用超时（默认 120000 ms）。
+
+三点与纯 skill 安装的差别：
+
+1. **不要再把本仓复制/克隆到 `~/.dsh/skills` 或项目 `.dsh/skills`。** 同名时文件系统来源会遮蔽插件的注册（本机实测：先注册的文件系统副本盖住了插件注册，且它带 `disable-model-invocation: true`，结果模型侧看不到该 skill）。只保留一种安装方式。
+2. 插件注册默认允许模型按需加载（`invocation.modelInvocable: true`）。这偏离 `SKILL.md` 里给文件系统来源写的 `disable-model-invocation: true`；原因见下。要严格保持“只由人显式加载”，启动 DSH 前设 `SJS_MODEL_INVOCABLE=false`。
+3. 入口只有一处：`dsh/index.js`（Host 半）+ `dsh/cordis.patch.yml`（插入 row）+ `dsh/locale/{en,zh}.json`、`dsh/icon.svg`（插件页信息）+ `dsh/plugin.test.mjs`（离线校验，`node --test dsh/plugin.test.mjs`）。`scripts/`、`references/`、`schemas/` 仍是唯一事实源，插件只是把它们接进 Harness。
+
+为什么默认允许模型加载：Harness 的 skill 目录就是它按需加载的入口，条目描述已写明“仅在明确点名、`route_key：意图` 或已绑定工作流时使用，不是普通任务的默认框架”。若你更希望完全由人显式点名，用第 2 条的开关关掉即可。
+
+维护注意：`check_skill_integrity.py` 已把 `dsh/`、`node_modules/` 与根 `package.json` 从 skill 文本基线中排除，插件打包文件不计入母版完整性。
+
 ## 最小实例
 
 ```text
