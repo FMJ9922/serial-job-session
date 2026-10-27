@@ -1,0 +1,7 @@
+{
+  "route_key": "manual-demo",
+  "goal": "Deliver the agreed feature with human direction and acceptance",
+  "authorization": {"paths": ["."], "tools": ["shell"]},
+  "policy": {"mode": "manual", "on_failure": "skip"},
+  "modules": {"estimates": false, "feishu": false}
+}

@@ -1,0 +1,15 @@
+{
+  "$id": "sjs-event/v5",
+  "type": "object",
+  "required": ["schema", "command_id", "request_hash", "seq", "stream", "at", "actor", "operations", "checksum"],
+  "properties": {
+    "schema": {"const": "sjs-event/v5"},
+    "seq": {"type": "integer", "minimum": 1},
+    "stream": {"enum": ["tasks", "direction"]},
+    "command_id": {"type": "string", "minLength": 1},
+    "request_hash": {"type": "string", "minLength": 64},
+    "checksum": {"type": "string", "minLength": 64},
+    "actor": {"type": "object"},
+    "operations": {"type": "array", "items": {"type": "object"}}
+  }
+}

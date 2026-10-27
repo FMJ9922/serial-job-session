@@ -1,8 +1,0 @@
-{
-  "schema": "serial-job-session-estimate-config/v1",
-  "quantile": 0.7,
-  "prior_strength": 4.0,
-  "speed_prior": 1.0,
-  "human_speed_factor": 0.15,
-  "note": "speed_prior 是任务类型速度先验，默认 1.0。人类基准可乘 human_speed_factor（0.1–0.2），禁止写成统一的 AI 永远快 5–10 倍。"
-}

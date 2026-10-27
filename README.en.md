@@ -1,135 +1,62 @@
 [简体中文](README.md) | English
 
-# serial-job-session
+# serial-job-session v5
 
-**A human-gated serial task protocol: one card at a time, one acceptance contract per card, evidence before acceptance.**
-
-A human-gated serial task protocol for AI coding agents. One card at a time, one acceptance contract per card, evidence before acceptance.
-
----
-
-## What it solves
-
-Handing a large task to an AI usually fails the same way: the human drops out of the loop, the agent chains many steps, skips dependencies, declares success on its own, or games a gate with fake data. `serial-job-session` goes the other way:
-
-- **The human stays the orchestrator**: split the work into cards, name the next one, accept or reject.
-- **The AI only does the named card**: no scope creep, no starting the next one automatically.
-- **Every card has a contract**: goal, dependencies, touched surfaces, acceptance, time, evidence.
-- **A single writer owns the control plane**: the main session writes `CURRENT`, the menu, `LOG` and `FACTS`; workers only write their own card and evidence.
-- **A fixed state machine**: `ready → doing → awaiting_acceptance → accepted`, with `cancelled` as the only exceptional side state.
-- **Gates outrank eyeballing**: when a mechanical gate is red, a human cannot simply wave it through.
-
-This is not the same thing as a workflow that fans out many agents at once. Fan-out suits large, well-bounded one-off tasks; this protocol suits long-running engineering that needs a human to keep making calls.
-
----
+A lightweight long-running workflow for AI agents: **shared methods, instance parameters, append-only records**. Contracts, independent review, bounded rework, reusable agent sessions and nested tasks share one event store.
 
 ## Quick start
 
+Python 3.11+, standard library only. Install in your host's skill directory; instances must live outside the skill. Review and edit an example configuration before using it:
+
 ```bash
-# 1. Install (DSH example; see INSTALL.md for other hosts)
-git clone https://github.com/FMJ9922/serial-job-session.git \
-  <your-repo>/.agents/skills/serial-job-session
+python scripts/sjs.py init --instance <project>/.cursor/workflows/demo --input examples/manual.json --dry-run
+python scripts/sjs.py init --instance <project>/.cursor/workflows/demo --input examples/manual.json
+python scripts/sjs.py context --instance <project>/.cursor/workflows/demo
+```
 
-# 2. Run the tests
-cd <your-repo>/.agents/skills/serial-job-session
+At creation, ask only for missing choices: manual / conditional / full AI; conditional risk and score thresholds; failure handling; optional estimates/timing and Feishu Base mirroring. **There is no default autonomy mode.** Suggested values need human confirmation. Existing answers persist across tasks; task-specific exceptions are recorded explicitly.
+
+Examples: [manual](examples/manual.json), [conditional](examples/conditional.json), [full AI](examples/full-ai.json). Their paths, thresholds and budgets are examples, not universal authorization. Host routing must explicitly invoke the skill; see [installation](INSTALL.md).
+
+## Instance layout
+
+```text
+demo/
+  run.json
+  state.json
+  records/
+    tasks-000001.jsonl
+    direction-000001.jsonl
+```
+
+The creation configuration is immutable. Later policy changes are events. Logs are authoritative; the snapshot is disposable. Optional artifacts/ and overrides/ stay flat, at most two file levels deep. Nested task IDs never create nested instances or duplicate the framework.
+
+The task log rolls after 20 completed top-level tasks or 512 KiB; the direction log after 20 records or 512 KiB. Limits are configurable. Corrections append to the current segment. Warm context reads the snapshot and new records, not sealed history or evidence contents.
+
+## Behavior
+
+- Manual: people decide starts, direction and acceptance.
+- Conditional: agents proceed only within confirmed score, risk, authorization and evidence requirements.
+- Full AI: agents decide within authorized scope and budgets. Low confidence or high risk does not automatically request a human, but failed or unknown mandatory checks never become passes.
+
+Scores are judgments, not calibrated success probabilities. Default rework is three rounds after the first implementation. On exhaustion, preserve results and skip to independent work unless stop was selected. Failed tasks never satisfy dependencies.
+
+Reuse suitable role/domain sessions through the host's existing collaboration tools. Validate handles and refresh role, contract and authorization after compaction. Recreate expired sessions using a bounded handoff. Reviewers cannot review their own implementation; cache savings are measured, not promised.
+
+Nested workflows are built in: two child levels and eight direct children per parent by default, adjustable at creation. All required children must be accepted before the parent. Shared editor resources and the controller event log have one writer.
+
+Estimates/timing and Feishu mirroring are optional. Disabled modules do not collect host data or call remote services. Enabled timing preserves unknowns; Feishu uses idempotent task keys and readback, with retry receipts in the same log.
+
+## Commands and verification
+
+The daily CLI is `scripts/sjs.py`: init / context / start / apply / handoff / check / rebuild / recover / stats / sync. Routes use an explicit registry, never a search across all instances. API examples, recovery and the full operation list are in [runtime](references/runtime.md); policies and modules are linked from [SKILL.md](SKILL.md).
+
+```bash
 python -m unittest discover -s scripts -p "test*.py"
-
-# 3. Create an instance (confirm the path and slug when prompted)
-python scripts/instantiate_domain.py --target <repo>/.cursor/workflows/<slug> \
-  --domain-name "<domain-name>" --route-key "<key>"
+python -m unittest discover -s Test/serial-job-session -p "test*.py"
+python scripts/check_skill_integrity.py
 ```
 
-Then talk to the agent with the standard commands:
+v5 replaces the previous runtime. There is no v3/v4 execution compatibility or importer. Existing business instances are untouched; create a new v5 instance. See [contributing](CONTRIBUTING.md), [changelog](CHANGELOG.md) and [security](SECURITY.md).
 
-```text
-<route_key>：推进          # advance / show the menu
-<route_key>：按菜单做 12   # run card 12
-<route_key>：验收通过      # accept
-<route_key>：打回：<reason> # reject
-```
-
-A bare "推进一下" does not trigger anything unless the current session is bound to exactly one instance.
-
----
-
-## Protocol at a glance
-
-| Role | Responsibility |
-|---|---|
-| Human | Set direction, split modules, name the next card, accept / reject |
-| Menu session | Read-only; shows the current `ready` cards, never picks for the human |
-| Worker | Executes exactly one named card; writes that card and its evidence |
-| Closer | Closes the card: timing, status, `LOG` / `FACTS` / menu |
-| Reviewer | Returns `pass / blocking` only; never closes |
-
-Minimum card fields: `id`, `shape`, `estimate_group`, `depends_on`, `faces`, `estimate`, `estimate_source`, `actor`, `human_accept`, `status`, `attempt`. The body has seven fixed sections (goal & acceptance / dependencies & inputs / progress, issues & decisions / execution time / artifacts & verification / closure patch / facts & lessons).
-
-Hard rules in one line: one card, one thing; do not chain a dependent card before its dependency closes; no `accepted` without timing; evidence paths are immutable; only the control-plane writer may edit shared control files; migration never rewrites `output/`; a failed liveness probe is a hard stop.
-
----
-
-## Layout
-
-```text
-SKILL.md                 Entry point (loads the docs below on demand)
-V4.md                    v4 state, timing, patches, direction review, migration
-ESTIMATE.md              Estimation and retrospective conventions
-PARALLEL.md              Parallelism criteria and prohibitions
-DELEGATION.md            Managed / overnight authorization contract
-GATE-PATTERNS.md         How to write mechanical gates
-IMMUTABILITY.md          Immutability rules for the master copy
-EVOLUTION.md             Capturing lessons
-INIT.md / FIRST-RUN.md   Creating an instance / first human run
-INSTALL.md               Installation for each host
-FEISHU.md                Optional Feishu/Lark task table (when the local CLI works)
-scripts/                 30 Python scripts (standard library only)
-schemas/                 JSON Schemas
-domain-pack-template/    Domain pack template
-Test/serial-job-session/ Replay fixtures and goldens (maintainers)
-skill-integrity.json     Master integrity baseline
-```
-
-A domain pack starts with just `ENV.md`, `CURRENT.md`, `JOB-SHAPES.md`, `jobs/`, `NORMS.md`, `FACTS.md`, `LOG.md`, plus an evidence directory.
-
----
-
-## Estimation and variance
-
-Estimates record `estimate`, `ai_net`, `elapsed`, `business_wait`, `variance`. When trustworthy timing is unavailable, write `untracked` instead of back-filling from chat timestamps. The estimate library lives at `<git-root>/.serial-job-session/estimate-library.jsonl` and can be shared across instances.
-
----
-
-## Optional integrations
-
-- **Feishu / Lark**: when the local `lark-cli` works, task tables can be mirrored; otherwise the steps are skipped and the main flow is unaffected. See [FEISHU.md](FEISHU.md).
-- **Git**: commits are sequential, performed by one authorized writer; never `git add` a mixed worktree wholesale.
-- **Editors / DCC**: a single-instance resource (Unity, Houdini, etc.) allows only one writing worker at a time; other parallel cards must be read-only or pure shell.
-
----
-
-## Development
-
-- Python 3.11+ (tested on 3.12), standard library only.
-- Unit tests: `python -m unittest discover -s scripts -p "test*.py"`
-- Replay fixtures: `python -m unittest discover -s Test/serial-job-session -p "test*.py"`
-- Release gate: `python scripts/quality_gate.py --domain <instance-root>`
-- Recompute the integrity baseline after editing master text: `python scripts/check_skill_integrity.py --update --maintenance-ack MODIFY_SKILL`
-
-More detail lives in [V4.md](V4.md), [ESTIMATE.md](ESTIMATE.md), [PARALLEL.md](PARALLEL.md) and [DELEGATION.md](DELEGATION.md) (currently written in Chinese).
-
----
-
-## License and attribution
-
-- License: **MIT** — see [LICENSE](LICENSE)
-- Copyright: © 2026 Beijing Taihe Interactive Information Technology Co., Ltd.
-- Author: **Shen Mai (沈劢)** — contact `shenmai@taiyouxi.cn`
-- Development: author-led, AI-assisted
-
----
-
-## Known limits
-
-- This release covers protocol v4. v3 cards remain readable, but migration is generic and contains no business-domain preprocessing.
-- `disable-model-invocation: true` means the model will not load the skill automatically; the host must route the `{route_key}: <intent>` command to it.
-- Feishu sync depends on the local CLI; without it, related commands skip or refuse, and the main flow is unaffected.
+MIT. Author: 沈劢. Copyright: 北京钛核互动信息技术有限公司. [Credits](CREDITS.md).

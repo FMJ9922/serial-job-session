@@ -1,0 +1,13 @@
+{
+  "route_key": "conditional-demo",
+  "goal": "Deliver the agreed feature within confirmed risk and evidence thresholds",
+  "authorization": {"paths": ["."], "tools": ["shell"]},
+  "policy": {
+    "mode": "conditional",
+    "on_failure": "skip",
+    "risk_ceiling": "medium",
+    "thresholds": {"feasibility": 85, "direction": 90, "acceptance": 95},
+    "confirmation": "Example only: replace with the user's actual parameter confirmation"
+  },
+  "modules": {"estimates": false, "feishu": false}
+}

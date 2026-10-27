@@ -1,8 +1,0 @@
-{
-  "schema": "serial-job-session-fixture/v1",
-  "id": "neg-menu-table-unparsed",
-  "command": "py -3 diagnose_replay.py fixtures/snapshots/neg-menu-table-unparsed",
-  "expected_codes": [
-    "MENU_TABLE_UNPARSED"
-  ]
-}

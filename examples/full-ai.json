@@ -1,0 +1,8 @@
+{
+  "route_key": "full-ai-demo",
+  "goal": "Deliver the agreed feature autonomously within explicit scope and budgets",
+  "authorization": {"paths": ["."], "tools": ["shell"]},
+  "policy": {"mode": "full_ai", "on_failure": "skip", "max_retries": 3},
+  "budget": {"max_tasks": 20},
+  "modules": {"estimates": false, "feishu": false}
+}

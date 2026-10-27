@@ -1,0 +1,19 @@
+{
+  "mode": "conditional",
+  "steps": [
+    {"action": "create", "id": "ui"},
+    {"action": "assess", "id": "ui", "score": 84},
+    {"action": "start", "id": "ui", "allowed": false},
+    {"action": "assess", "id": "ui", "score": 85},
+    {"action": "start", "id": "ui", "allowed": true},
+    {"action": "report", "id": "ui", "version": "v1"},
+    {"action": "review", "id": "ui", "score": 100, "check": "unknown"},
+    {"action": "accept", "id": "ui", "error": "REQUIRED_CHECK_NOT_PASSED"},
+    {"action": "reject", "id": "ui"},
+    {"action": "report", "id": "ui", "version": "v2"},
+    {"action": "accept", "id": "ui", "error": "ACCEPTANCE_ASSESSMENT_REQUIRED"},
+    {"action": "review", "id": "ui", "score": 95},
+    {"action": "accept", "id": "ui", "allowed": true}
+  ],
+  "expected": {"ui": "accepted"}
+}

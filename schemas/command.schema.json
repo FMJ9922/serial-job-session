@@ -1,0 +1,11 @@
+{
+  "$id": "sjs-command/v5",
+  "type": "object",
+  "required": ["command_id", "expected_revision", "actor", "operations"],
+  "properties": {
+    "command_id": {"type": "string", "minLength": 1},
+    "expected_revision": {"type": "integer", "minimum": 1},
+    "actor": {"type": "object", "required": ["id", "kind"], "properties": {"id": {"type": "string", "minLength": 1}, "kind": {"enum": ["human", "agent"]}, "role": {"type": "string"}}},
+    "operations": {"type": "array", "items": {"type": "object", "required": ["op"], "properties": {"op": {"type": "string", "minLength": 1}, "task_id": {"type": "string"}}}}
+  }
+}

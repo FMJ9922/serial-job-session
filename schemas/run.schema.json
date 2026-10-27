@@ -1,0 +1,19 @@
+{
+  "$id": "sjs-run/v5",
+  "type": "object",
+  "required": ["goal", "route_key", "authorization", "policy", "modules"],
+  "properties": {
+    "goal": {"type": "string", "minLength": 1},
+    "route_key": {"type": "string", "minLength": 1},
+    "authorization": {"type": "object", "required": ["paths", "tools"], "properties": {"paths": {"type": "array", "items": {"type": "string"}}, "tools": {"type": "array", "items": {"type": "string"}}}},
+    "policy": {"type": "object", "required": ["mode"], "properties": {
+      "mode": {"enum": ["manual", "conditional", "full_ai"]},
+      "on_failure": {"enum": ["skip", "stop"]},
+      "max_retries": {"type": "integer", "minimum": 0},
+      "independent_review": {"type": "boolean"},
+      "risk_ceiling": {"enum": ["low", "medium", "high"]},
+      "thresholds": {"type": "object", "properties": {"feasibility": {"type": "number", "minimum": 0, "maximum": 100}, "direction": {"type": "number", "minimum": 0, "maximum": 100}, "acceptance": {"type": "number", "minimum": 0, "maximum": 100}}}
+    }},
+    "modules": {"type": "object", "required": ["estimates", "feishu"], "properties": {"estimates": {"type": "boolean"}, "feishu": {"type": "boolean"}}}
+  }
+}

@@ -1,135 +1,74 @@
 简体中文 | [English](README.en.md)
 
-# serial-job-session
+# serial-job-session v5
 
-**人类把关的串行任务协议：一次一张卡，一张卡一个合同，先有证据再验收。**
+面向 AI agent 的轻量长期任务工作流：**共享方法模板，实例只保存参数和追加式数据。**
 
-A human-gated serial task protocol for AI coding agents. One card at a time, one acceptance contract per card, evidence before acceptance.
+每个任务有合同、版本和证据。人工主导、条件自治和全 AI 由人在创建时选择；独立验收、有限返工、角色会话复用和嵌套任务使用同一份记录。
 
----
+## 开始
 
-## 它解决什么问题
-
-把一个大任务直接丢给 AI，常见死法是人不在回路：它连做多步、跳过依赖、自己宣布完成、拿假数据过门禁。`serial-job-session` 的做法相反：
-
-- **人当编排器**：拆卡、点名下一张、验收或打回。
-- **AI 只做被点名的那一张**：不扩边界、不自动开工下一张。
-- **每张卡有合同**：目标、依赖、影响面、验收方式、耗时、证据。
-- **控制面单写者**：主会话写 `CURRENT` / 菜单 / `LOG` / `FACTS`；Worker 只写自己的卡和证据。
-- **状态机固定**：`ready → doing → awaiting_acceptance → accepted`，异常侧只有 `cancelled`。
-- **门禁优先于人眼**：机械门禁判红时，人也不能口头覆盖。
-
-它与「一次扇出很多 Agent 的 workflow」不是同一件事；后者适合边界清楚的一次性大任务，前者适合长期、需要人持续拍板的工程。
-
----
-
-## 快速开始
+需要 Python 3.11+，只使用标准库。将仓库安装到宿主可发现的 skill 目录，运行测试：
 
 ```bash
-# 1. 安装（DSH 示例；其它宿主见 INSTALL.md）
-git clone https://github.com/FMJ9922/serial-job-session.git \
-  <your-repo>/.agents/skills/serial-job-session
-
-# 2. 跑测试
-cd <your-repo>/.agents/skills/serial-job-session
 python -m unittest discover -s scripts -p "test*.py"
-
-# 3. 创建一个实例（按提示确认路径与 slug）
-python scripts/instantiate_domain.py --target <repo>/.cursor/workflows/<slug> \
-  --domain-name "<领域名>" --route-key "<口令>"
+python -m unittest discover -s Test/serial-job-session -p "test*.py"
+python scripts/check_skill_integrity.py
 ```
 
-之后对 Agent 说标准口令：
+从共享示例选择并修改参数，先预检，再创建。实例必须在 skill 外；下面的路径均是占位示例：
+
+```bash
+python scripts/sjs.py init --instance <project>/.cursor/workflows/demo --input examples/manual.json --dry-run
+python scripts/sjs.py init --instance <project>/.cursor/workflows/demo --input examples/manual.json
+python scripts/sjs.py context --instance <project>/.cursor/workflows/demo
+```
+
+创建时集中确认：决策模式；条件自治的风险和评分门槛；失败处置；是否启用估分计时和飞书同步。用户已明确的项目不重复询问。缺失模式会返回选项，不自动套用默认。
+
+示例分别为 [人工主导](examples/manual.json)、[条件自治](examples/conditional.json)、[全 AI](examples/full-ai.json)。**示例中的路径、评分和预算需要按实际任务确认，不能当作通用授权。**
+
+标准口令为 `route_key：意图`，如 `界面优化：推进`。宿主必须显式加载本 skill 或转发口令；`disable-model-invocation: true` 的含义见 [安装说明](INSTALL.md)。
+
+## 最小实例
 
 ```text
-<route_key>：推进
-<route_key>：按菜单做 12
-<route_key>：验收通过
-<route_key>：打回：<原因>
+demo/
+  run.json
+  state.json
+  records/
+    tasks-000001.jsonl
+    direction-000001.jsonl
 ```
 
-裸「推进一下」不会触发，除非当前会话已绑定唯一实例。
+run 是创建参数；tasks 与 direction 是追加式事实记录；state 是可删除重建的当前投影。证据 artifacts/ 和局部 overrides/ 按需创建，实例文件深度最多两层。子任务 ID 可包含 `/`，不会生成子目录。
 
----
+默认每20张完成的顶层任务或512 KiB 封存任务分片；方向每20条或512 KiB 封存。阈值可配置，旧卡补丁追加到当前分片。日常上下文只读快照和新增记录，不扫描封存历史或证据。
 
-## 协议一览
+## 决策与复用
 
-| 角色 | 职责 |
-|---|---|
-| 人 | 定方向、拆模块、点名下一张、验收 / 打回 |
-| 菜单会话 | 只读，只展示当前 `ready` 卡，不代选 |
-| Worker | 只做被点名的一张卡，写卡与证据 |
-| Closer | 收口：计时、状态、`LOG` / `FACTS` / 菜单 |
-| Reviewer | 只给 `pass / blocking`，不结案 |
+- **人工主导**：人决定开工、方向和验收；agent 准备合同、证据与建议。
+- **条件自治**：agent 提议参数，人确认；逐项满足门槛、风险、授权和必验项后推进，否则留下判断数据转人工。
+- **全 AI**：授权与预算内由 agent 决策；低分或高风险不自动转人工。失败、未知和未覆盖的必验项仍如实记录。
 
-卡的最小合同字段：`id`、`shape`、`estimate_group`、`depends_on`、`faces`、`estimate`、`estimate_source`、`actor`、`human_accept`、`status`、`attempt`；正文固定七章（目标范围验收 / 依赖输入影响 / 进展问题决策 / 执行耗时 / 产物验证反馈 / 结案补丁 / 事实经验变化）。
+默认首次实现后最多返工3次；耗尽后保留成果、跳过失败任务并继续独立任务，也可选择停止。评分是判断，不是校准成功概率。
 
-硬规则摘要：一卡一事；依赖未结档不得连做；缺计时不得 `accepted`；证据路径不可变；共享控制文件只有控制面写者能改；`output/` 不得被迁移重写；探活失败硬停。
+编排器、评估者、worker、reviewer、提交者和经验整理者按需启用。同角色同领域优先续接已有 agent；句柄失效时用最小交接包恢复。独立 reviewer 不验收自己实现的候选。宿主会话复用与模型缓存是不同机制，不承诺固定节省比例。
 
----
+复杂任务可建议嵌套，按所选决策模式启用。默认深度2层、每父任务8个直接子任务；父任务必须等待必需子任务全部验收。估分计时、飞书 Base 镜像均在创建时询问并按需加载。
 
-## 目录
+## 接口与文档
 
-```text
-SKILL.md                 入口（按需加载下面这些）
-V4.md                    v4 状态、计时、补丁、方向审阅、迁移
-ESTIMATE.md              估分与复盘口径
-PARALLEL.md              并行判据与禁止清单
-DELEGATION.md            托管 / 夜跑授权合同
-GATE-PATTERNS.md         机械门禁写法
-IMMUTABILITY.md          母版不可变规则
-EVOLUTION.md             经验沉淀
-INIT.md / FIRST-RUN.md   创建实例 / 人类首次使用
-INSTALL.md               各宿主安装
-FEISHU.md                可选飞书表（本机 CLI 已通时）
-scripts/                 30 个 Python 脚本（无第三方依赖）
-schemas/                 JSON Schema
-domain-pack-template/    领域包模板
-Test/serial-job-session/ 回放夹具与 goldens（维护者用）
-skill-integrity.json     母版完整性基线
-```
+唯一日常 CLI：init / context / start / apply / handoff / check / rebuild / recover / stats / sync。支持 `--instance` 或通过注册表使用 `--route-key`，不全盘搜索实例。
 
-初始化一个领域包只需要：`ENV.md`、`CURRENT.md`、`JOB-SHAPES.md`、`jobs/`、`NORMS.md`、`FACTS.md`、`LOG.md`，外加一个证据目录。
+- [事件与命令示例、恢复](references/runtime.md)
+- [创建与验收策略](references/governance.md)
+- [角色复用](references/agents.md) · [嵌套](references/nesting.md)
+- [估分计时](references/estimates.md) · [飞书镜像](references/feishu.md)
+- [开发与测试](CONTRIBUTING.md) · [版本变化](CHANGELOG.md)
 
----
+## 版本边界
 
-## 估算与偏差
+v5 是直接替换版本：不保留 v3/v4 执行器或迁移器。已有实例保持原处；需要旧版执行时使用原安装，新工作流创建 v5 实例。更新本仓不会扫描或改写其他项目的数据。
 
-估分记录 `estimate`、`ai_net`、`elapsed`、`business_wait`、`variance`；缺失可信计时时写 `untracked`，不按聊天时间倒推。估分库在 `<git-root>/.serial-job-session/estimate-library.jsonl`，可跨实例复用。
-
----
-
-## 可选集成
-
-- **飞书 / Lark**：本机 `lark-cli` 已通时，可把任务表做成轻量镜像；不通就跳过，不影响主流程。见 [FEISHU.md](FEISHU.md)。
-- **Git**：提交由唯一获授权的写者串行执行；不整文件 `git add` 混合工作区。
-- **编辑器 / DCC**：同一单实例资源（Unity、Houdini 等）同一时刻只允许一个写 Worker，其余并行卡必须是纯读或纯 Shell。
-
----
-
-## 开发
-
-- Python 3.11+，只用标准库。
-- 单元测试：`python -m unittest discover -s scripts -p "test*.py"`
-- 回放夹具：`python -m unittest discover -s Test/serial-job-session -p "test*.py"`
-- 发布门槛：`python scripts/quality_gate.py --domain <instance-root>`
-- 修改母版文本后重算完整性：`python scripts/check_skill_integrity.py --update --maintenance-ack MODIFY_SKILL`
-
-更多实现细节见 [V4.md](V4.md)、[ESTIMATE.md](ESTIMATE.md)、[PARALLEL.md](PARALLEL.md)、[DELEGATION.md](DELEGATION.md)。
-
----
-
-## 授权与署名
-
-- License: **MIT** — 见 [LICENSE](LICENSE)
-- 版权：© 2026 北京钛核互动信息技术有限公司
-- 作者：**沈劢** — 联系邮箱 `shenmai@taiyouxi.cn`
-- 开发方式：作者主导，AI 辅助
-
----
-
-## 已知边界
-
-- 本版只覆盖 v4 协议；v3 旧卡可以继续读，但迁移是通用能力，不包含任何具体业务域的预处理。
-- `disable-model-invocation: true` 意味着模型不会自动加载；需要宿主命令或规则层把口令转给 skill。
-- 飞书同步依赖本机 CLI；没有 CLI 时相关命令会跳过或拒绝，但主流程不受影响。
+MIT；作者沈劢，版权归北京钛核互动信息技术有限公司。见 [LICENSE](LICENSE)、[署名](CREDITS.md)。

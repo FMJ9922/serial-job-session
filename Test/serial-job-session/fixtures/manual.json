@@ -1,0 +1,13 @@
+{
+  "mode": "manual",
+  "steps": [
+    {"action": "create", "id": "ui"},
+    {"action": "start", "id": "ui", "allowed": false},
+    {"action": "start", "id": "ui", "human": true, "allowed": true},
+    {"action": "report", "id": "ui", "version": "v1"},
+    {"action": "review", "id": "ui", "score": 99},
+    {"action": "accept", "id": "ui", "allowed": false},
+    {"action": "accept", "id": "ui", "human": true, "allowed": true}
+  ],
+  "expected": {"ui": "accepted"}
+}

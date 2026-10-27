@@ -1,0 +1,7 @@
+{
+  "policy": {"on_failure": "skip", "max_retries": 3, "independent_review": true},
+  "limits": {"max_depth": 2, "max_children": 8, "max_parallel": 1},
+  "rotation": {"tasks": 20, "direction": 20, "bytes": 524288},
+  "context_chars": 12000,
+  "parameters": {}
+}

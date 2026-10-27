@@ -64,7 +64,7 @@ def tracked_files() -> Dict[str, str]:
         if not path.is_file():
             continue
         relative = path.relative_to(SKILL_ROOT)
-        if relative.parts and relative.parts[0] in {"Test", ".git", ".github"}:
+        if relative.parts and relative.parts[0] in {"Test", ".git", ".github", "output", ".serial-job-session", ".venv", "venv"}:
             continue
         if "__pycache__" in relative.parts or path.suffix == ".pyc":
             continue
@@ -82,7 +82,7 @@ def observed_hashes() -> Dict[str, set]:
         if not path.is_file():
             continue
         relative = path.relative_to(SKILL_ROOT)
-        if relative.parts and relative.parts[0] in {"Test", ".git", ".github"}:
+        if relative.parts and relative.parts[0] in {"Test", ".git", ".github", "output", ".serial-job-session", ".venv", "venv"}:
             continue
         if "__pycache__" in relative.parts or path.suffix == ".pyc":
             continue

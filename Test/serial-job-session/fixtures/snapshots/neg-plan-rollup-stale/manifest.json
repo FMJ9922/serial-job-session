@@ -1,8 +1,0 @@
-{
-  "schema": "serial-job-session-fixture/v1",
-  "id": "neg-plan-rollup-stale",
-  "command": "py -3 diagnose_replay.py fixtures/snapshots/neg-plan-rollup-stale",
-  "expected_codes": [
-    "PLAN_ROLLUP_STALE"
-  ]
-}

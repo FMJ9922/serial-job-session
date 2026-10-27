@@ -1,8 +1,0 @@
-{
-  "schema": "serial-job-session-fixture/v1",
-  "id": "neg-stale-dep-70",
-  "command": "py -3 diagnose_replay.py fixtures/snapshots/neg-stale-dep-70",
-  "expected_codes": [
-    "STALE_DEPENDENCY"
-  ]
-}

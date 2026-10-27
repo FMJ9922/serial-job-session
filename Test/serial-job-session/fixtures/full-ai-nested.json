@@ -1,0 +1,20 @@
+{
+  "mode": "full_ai",
+  "steps": [
+    {"action": "create", "id": "ui"},
+    {"action": "assess", "id": "ui", "score": 1, "risk": "high"},
+    {"action": "start", "id": "ui", "allowed": true},
+    {"action": "nest", "id": "ui", "allowed": true},
+    {"action": "create", "id": "ui/part", "parent": "ui"},
+    {"action": "report", "id": "ui", "version": "too-early", "error": "CHILDREN_NOT_ACCEPTED"},
+    {"action": "assess", "id": "ui/part", "score": 1, "risk": "high"},
+    {"action": "start", "id": "ui/part", "allowed": true},
+    {"action": "report", "id": "ui/part", "version": "child-1"},
+    {"action": "review", "id": "ui/part", "score": 1, "risk": "high"},
+    {"action": "accept", "id": "ui/part", "allowed": true},
+    {"action": "report", "id": "ui", "version": "parent-1"},
+    {"action": "review", "id": "ui", "score": 1, "risk": "high"},
+    {"action": "accept", "id": "ui", "allowed": true}
+  ],
+  "expected": {"ui": "accepted", "ui/part": "accepted"}
+}

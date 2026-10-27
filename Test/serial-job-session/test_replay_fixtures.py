@@ -1,59 +1,77 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+"""Replay independent declarative scenarios, including deliberately red gates."""
+from __future__ import annotations
+
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
-ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT))
-import diagnose_replay  # noqa: E402
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
 
-LIVE_ALLOWED_BLOCKING = set()
-BLOCKING = {
-    "STALE_DEPENDENCY",
-    "REJECTED_IN_SUCCESS_SAMPLE",
-    "LIBRARY_STALE_REVISION",
-    "PLAN_ROLLUP_STALE",
-    "POST_CLOSE_INCOMPLETE",
-    "MENU_TABLE_UNPARSED",
-}
+import sjs_config as config
+import sjs_store as store
 
 
-class ReplayFixtureTests(unittest.TestCase):
-    def test_catalog_known_defects(self):
-        catalog = ROOT / "fixtures" / "baseline-2.2.json"
-        data = json.loads(catalog.read_text(encoding="utf-8"))
-        ids = {item["id"] for item in data["known_defects"]}
-        self.assertIn("stale_dependency_70", ids)
-        self.assertIn("missing_library_119_126", ids)
-        self.assertIn("menu_table_unparsed", ids)
+class ReplayTests(unittest.TestCase):
+    def replay(self, name):
+        fixture = json.loads((Path(__file__).parent / "fixtures" / (name + ".json")).read_text())
+        with tempfile.TemporaryDirectory() as temporary, mock.patch("check_skill_integrity.check_manifest", return_value={"ok": True}):
+            instance = Path(temporary) / "flow"
+            policy = {"mode": fixture["mode"]}
+            if policy["mode"] == "conditional":
+                policy.update(risk_ceiling="medium", thresholds={"feasibility": 85, "direction": 90, "acceptance": 95}, confirmation="fixture explicit human instruction")
+            store.initialize(instance, {"goal": "Fix agreed UI", "route_key": "replay", "authorization": {"paths": ["."], "tools": ["shell"]},
+                "policy": policy, "modules": {"estimates": False, "feishu": False}, "rotation": {"tasks": 1}})
+            for index, step in enumerate(fixture["steps"]):
+                state = store.load_snapshot(instance)
+                task_id, action = step["id"], step["action"]
+                op = {"op": action, "task_id": task_id}
+                if action == "create":
+                    op["contract"] = {"goal": "Fix " + task_id, "checks": [{"id": "works", "description": "Matches actual reference"}]}
+                    if step.get("parent"):
+                        op["parent_id"] = step["parent"]
+                elif action in {"assess", "review"}:
+                    phase = "acceptance" if action == "review" else "feasibility"
+                    data = {"id": "assessment-" + str(index), "score": step["score"], "risk": step.get("risk", "low"), "conclusion": "pass",
+                            "evidence": ["artifacts/observed.png"], "unknowns": [], "rationale": "fixture observation", "recovery_cost": "isolated reversible write"}
+                    if action == "review":
+                        task = state["tasks"][task_id]
+                        data.update(candidate_version=task["candidate"]["version"], contract_version=task["contract_version"], by={"id": "reviewer", "kind": "agent"},
+                                    checks={"works": {"status": step.get("check", "passed"), "evidence": ["artifacts/observed.png"]}})
+                    op.update(op="assess", phase=phase, assessment=data)
+                elif action == "report":
+                    op.update(candidate_version=step["version"], by={"id": "worker", "kind": "agent"}, evidence=["artifacts/observed.png"])
+                elif action in {"reject", "nest"}:
+                    op["reason"] = "fixture feedback or decomposition"
+                command = {"command_id": "step-" + str(index), "expected_revision": state["revision"],
+                           "actor": {"id": "human" if step.get("human") else "controller", "kind": "human" if step.get("human") else "agent"}, "operations": [op]}
+                with self.subTest(fixture=name, step=index, action=action):
+                    if step.get("error"):
+                        with self.assertRaises(config.SJSError) as caught:
+                            store.apply_command(instance, command)
+                        self.assertEqual(caught.exception.code, step["error"])
+                        self.assertEqual(state, store.load_snapshot(instance), "Rejected operation must not mutate state")
+                    else:
+                        result = store.apply_command(instance, command)
+                        if "allowed" in step:
+                            self.assertEqual(result["outcomes"][0]["decision"]["allowed"], step["allowed"])
+            state = store.load_snapshot(instance)
+            self.assertEqual({k: t["status"] for k, t in state["tasks"].items()}, fixture["expected"])
+            self.assertEqual(state, store.rebuild(instance, persist=False))
+            (instance / "state.json").unlink()
+            self.assertEqual(state, store.load_snapshot(instance))
 
-    def test_negative_snapshots_match_goldens(self):
-        snaps = ROOT / "fixtures" / "snapshots"
-        goldens = ROOT / "fixtures" / "goldens"
-        reports = []
-        for snapshot in sorted(p for p in snaps.iterdir() if p.is_dir()):
-            report = diagnose_replay.replay_one(snapshot)
-            reports.append(report)
-            golden_path = goldens / (report["id"] + ".json")
-            self.assertTrue(golden_path.is_file(), golden_path)
-            golden = json.loads(golden_path.read_text(encoding="utf-8"))
-            self.assertEqual(golden["expected_codes"], report["expected_codes"], report)
-            self.assertEqual(golden["observed_codes"], report["observed_codes"], report)
-            self.assertTrue(report["ok"], report)
-        blocking_negs = [
-            item for item in reports if item["id"].startswith("neg-")
-        ]
-        self.assertEqual(len(blocking_negs), 6)
-        for item in blocking_negs:
-            self.assertTrue(set(item["expected_codes"]) & BLOCKING, item)
+    def test_manual(self):
+        self.replay("manual")
 
-    def test_live_min_has_no_unexpected_blocking(self):
-        snapshot = ROOT / "fixtures" / "snapshots" / "live-min"
-        report = diagnose_replay.replay_one(snapshot)
-        blocking = set(report["observed_codes"]) & BLOCKING
-        self.assertEqual(blocking, LIVE_ALLOWED_BLOCKING, report)
+    def test_conditional_rework(self):
+        self.replay("conditional-rework")
+
+    def test_full_ai_nested(self):
+        self.replay("full-ai-nested")
 
 
 if __name__ == "__main__":
