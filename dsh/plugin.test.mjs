@@ -52,9 +52,9 @@ async function withProfileDir(body) {
 
 /**
  * Minimal Cordis-like context that records registrations, a Web route table and
- * the optional services the plugin looks up.
+ * the optional services the plugin waits for.
  *
- * @param {{ skills?: boolean, tools?: boolean, web?: boolean }} [options] which optional services exist.
+ * @param {{ skills?: boolean, tools?: boolean, web?: boolean }} [options] which services exist already.
  * @returns {{ ctx: object, skills: object[], tools: object[], routes: Map<string, object> }} recorder.
  */
 function fakeContext(options = {}) {
@@ -93,6 +93,10 @@ function fakeContext(options = {}) {
     },
     get(key) {
       return services[key]
+    },
+    inject(names, callback) {
+      if (!names.every((key) => services[key])) return
+      callback({ ...ctx, ...services })
     },
   }
   return { ctx, skills, tools, routes }
@@ -195,6 +199,62 @@ test('apply stays loadable in a profile without tools, skills or a Web carrier',
   assert.equal(skills.length, 0)
   assert.equal(tools.length, 0)
   assert.equal(routes.size, 0)
+})
+
+test('apply waits for services that mount later in the boot order', () => {
+  const skills = []
+  const tools = []
+  const routes = new Map()
+  const services = {}
+  const pending = []
+  const child = () => ({ ...ctx, ...services })
+  const ctx = {
+    effect(callback) {
+      callback()
+    },
+    get(key) {
+      return services[key]
+    },
+    inject(names, callback) {
+      if (names.every((key) => services[key])) callback(child())
+      else pending.push({ names, callback })
+    },
+  }
+
+  apply(ctx)
+  assert.equal(skills.length, 0, 'nothing may register before its service exists')
+  assert.equal(tools.length, 0)
+  assert.equal(routes.size, 0)
+  assert.equal(pending.length, 3)
+
+  services.skills = {
+    register(registration) {
+      skills.push(registration)
+      return () => {}
+    },
+  }
+  services.tools = {
+    register(definition) {
+      tools.push(definition)
+      return () => {}
+    },
+  }
+  services.webServer = {
+    register(route) {
+      routes.set(route.path, route)
+      return () => {}
+    },
+  }
+  for (const entry of pending.splice(0)) entry.callback(child())
+
+  assert.equal(skills.length, 1)
+  assert.equal(tools.length, 1)
+  assert.equal(tools[0].name, 'sjs')
+  assert.deepEqual([...routes.keys()].sort(), [
+    '/serial-job-session/api/probe',
+    '/serial-job-session/api/settings',
+    '/serial-job-session/api/state',
+  ])
 })
 
 test('the tool schema exposes every v5 subcommand and the shared options', () => {

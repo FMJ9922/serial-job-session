@@ -547,12 +547,12 @@ function panelState(settings) {
 }
 
 /**
- * Register the panel JSON API on the Web carrier, when one is mounted.
+ * Register the panel JSON API on the Web carrier.
  *
- * @param {import('cordis').Context} ctx plugin context.
+ * @param {import('cordis').Context} ctx a context that has the `webServer` service.
  */
 function registerPanelRoutes(ctx) {
-  const webServer = ctx.get('webServer')
+  const webServer = ctx.webServer ?? ctx.get('webServer')
   if (!webServer || typeof webServer.register !== 'function') return
 
   ctx.effect(() =>
@@ -804,19 +804,23 @@ function buildTool(ctx) {
 /**
  * Register the skill, the tool and the panel API.
  *
- * The services are looked up optionally so a profile without the skill registry,
- * the tool registry or a Web carrier still loads the rest instead of throwing.
+ * Each service is awaited through `ctx.inject` instead of being read with
+ * `ctx.get` during apply: a profile composes rows in its own order, and at boot
+ * this row can apply before the skill registry, the tool registry or the Web
+ * carrier exists. Reading them immediately would silently register nothing; an
+ * injected child runs as soon as its service is present and is torn down with
+ * it, and a profile that never mounts one of them simply skips that half.
  *
  * @param {import('cordis').Context} ctx plugin context.
  */
 export function apply(ctx) {
-  const skills = ctx.get('skills')
-  if (skills && typeof skills.register === 'function') {
-    ctx.effect(() => skills.register(buildSkillRegistration()))
-  }
-  const tools = ctx.get('tools')
-  if (tools && typeof tools.register === 'function') {
-    ctx.effect(() => tools.register(buildTool(ctx)))
-  }
-  registerPanelRoutes(ctx)
+  ctx.inject(['skills'], (scope) => {
+    scope.effect(() => scope.skills.register(buildSkillRegistration()))
+  })
+  ctx.inject(['tools'], (scope) => {
+    scope.effect(() => scope.tools.register(buildTool(scope)))
+  })
+  ctx.inject(['webServer'], (scope) => {
+    registerPanelRoutes(scope)
+  })
 }
