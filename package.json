@@ -19,11 +19,13 @@
   ],
   "exports": {
     ".": "./dsh/index.js",
+    "./client": "./dsh/client.js",
     "./locale/*.json": "./dsh/locale/*.json",
     "./icon": "./dsh/icon.svg"
   },
   "files": [
     "dsh/index.js",
+    "dsh/client.js",
     "dsh/cordis.patch.yml",
     "dsh/locale/*.json",
     "dsh/icon.svg",
@@ -45,11 +47,18 @@
   ],
   "scripts": {
     "test:plugin": "node --test dsh/plugin.test.mjs",
-    "check:plugin": "node --check dsh/index.js"
+    "check:plugin": "node --check dsh/index.js && node --check dsh/client.js"
   },
   "dsh": {
     "bundle": {
       "patch": "./dsh/cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
     }
   }
 }

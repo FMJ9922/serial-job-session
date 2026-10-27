@@ -1,14 +1,14 @@
 {
   "schema": "serial-job-session-integrity/v1",
   "protocol_version": "5.0.0",
-  "generated_at": "2026-10-27T21:25:11+08:00",
+  "generated_at": "2026-10-27T21:33:46+08:00",
   "files": {
     "CREDITS.md": "0ee6eed00d0e954ab122767059677662feea7c66f60e6c45bb04cd97d4e1bc88",
     "defaults.json": "2aad3905b8e9f1caa36cb4f3baac62c2c3110be992f9afd63925b43202686de8",
     "examples/conditional.json": "86ae6bf5224b5970bb6658ea34846604a0ee8a061476acac0319f31cb7ca8c40",
     "examples/full-ai.json": "c127f25a8f455c40e332e2fcf104e1238f834d71dcc4a4fa40fceaccf06a9548",
     "examples/manual.json": "300d78ab7590060cec71fec4816519c15b4a2aec8d0dc6043077bf1441877fce",
-    "INSTALL.md": "6ded8c38368fdc84c2843cdd7ac249bb16349471704b600125d6d327b55cc582",
+    "INSTALL.md": "f1d55281f42b5e75d75b128a4ab55491dc2522222102f0fc04a9f6ad5791ad38",
     "references/agents.md": "4bc1041d7d5f23362d43273b5d06e608d321e79f6f94fccdde8b297acf64ae1a",
     "references/estimates.md": "564fb98748718421f50f29a55df70ad7010bfc5c0d25b569d66b4fa1928503b5",
     "references/feishu.md": "283355bd7249948e8d2e7e34432b90a5e9544ae85ed7276ba4fddeded87b44ca",

@@ -1,7 +1,7 @@
 /**
  * Host half of the DSH bundle that ships serial-job-session v5.
  *
- * The bundle does two things in the running Harness:
+ * The bundle does four things in the running Harness:
  *
  * 1. Registers the repository's `SKILL.md` as a Harness skill named
  *    `serial-job-session`, with the repository root as its resource base, so an
@@ -10,6 +10,11 @@
  *    daily CLI (`scripts/sjs.py`) inside the calling session's working
  *    directory, so the workflow does not depend on the caller knowing where a
  *    checkout lives or which interpreter to use.
+ * 3. Persists the plugin's own runtime parameters (interpreter, timeout, extra
+ *    CLI arguments) in a profile-scoped JSON file, which the `sjs` tool reads on
+ *    every call — a change applies without restarting the Harness.
+ * 4. Serves the small JSON API the Client panel uses to read and write those
+ *    parameters, under `/serial-job-session/api/`.
  *
  * The module imports only Node builtins: a linked bundle resolves imports from
  * its own checkout, which has no `node_modules`.
@@ -17,16 +22,14 @@
  * @module dsh-serial-job-session
  */
 
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { spawn } from 'node:child_process'
+import { homedir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /** Bundle identity, also the Loader row name. */
 export const name = 'dsh-serial-job-session'
-
-/** Hard dependencies: this bundle exists to add a skill and a tool. */
-export const inject = ['tools', 'skills']
 
 /** The plugin package directory (`<repo>/dsh`). */
 const PLUGIN_DIR = path.dirname(fileURLToPath(import.meta.url))
@@ -35,6 +38,7 @@ const SKILL_ROOT = path.resolve(PLUGIN_DIR, '..')
 const SKILL_PATH = path.join(SKILL_ROOT, 'SKILL.md')
 const CLI_PATH = path.join(SKILL_ROOT, 'scripts', 'sjs.py')
 const VERSION_PATH = path.join(SKILL_ROOT, 'VERSION')
+const DEFAULTS_PATH = path.join(SKILL_ROOT, 'defaults.json')
 
 /** Provider name reported in the skill catalog. */
 const PROVIDER = name
@@ -53,10 +57,19 @@ const COMMANDS = [
 ]
 /** Default bound on one CLI run, in milliseconds. */
 const DEFAULT_TIMEOUT_MS = 120_000
+/** Accepted timeout range. */
+const MIN_TIMEOUT_MS = 1_000
+const MAX_TIMEOUT_MS = 600_000
 /** Upper bound on text handed back to the model for one call. */
 const MAX_OUTPUT_CHARS = 30_000
-/** Candidate interpreters, in order, when `SJS_PYTHON` is unset. */
+/** Upper bound on a panel request body. */
+const MAX_REQUEST_BYTES = 64 * 1024
+/** Candidate interpreters, in order, when neither settings nor `SJS_PYTHON` name one. */
 const DEFAULT_PYTHON = ['python', 'python3', 'py']
+/** Settings file name inside the profile directory. */
+const SETTINGS_FILE = 'serial-job-session.json'
+/** JSON API prefix served to the Client panel. */
+const API_PREFIX = '/serial-job-session/api'
 
 /**
  * Parse the small YAML subset `SKILL.md` front matter uses: scalar lines and
@@ -103,11 +116,7 @@ export function parseFrontMatter(text) {
     ) {
       value = value.slice(1, -1)
     }
-    if (key === 'disable-model-invocation') {
-      meta[key] = value.toLowerCase() === 'true' ? 'true' : 'false'
-    } else {
-      meta[key] = value
-    }
+    meta[key] = value
   }
   const body = lines.slice(end + 1).join('\n').replace(/^\s*/, '')
   return { meta, body }
@@ -116,18 +125,15 @@ export function parseFrontMatter(text) {
 /**
  * Build the skill registration read from the checkout's `SKILL.md`.
  *
- * The upstream file keeps `disable-model-invocation: true` so a filesystem
- * install stays user-invoked. A bundle registration is the Harness's explicit
- * loading path, so it permits model invocation by default; set
- * `SJS_MODEL_INVOCABLE=false` in the Host environment to keep the stricter
- * user-only policy.
+ * Model invocation stays permitted: a bundle registration is the Harness's
+ * on-demand loading path, and the shipped description already limits use to an
+ * explicit name, a `route_key：意图` phrase, or an already-bound workflow.
  *
  * @returns {Record<string, unknown>} the registration object.
  */
 export function buildSkillRegistration() {
   const raw = readFileSync(SKILL_PATH, 'utf8')
   const { meta, body } = parseFrontMatter(raw)
-  const modelInvocable = process.env.SJS_MODEL_INVOCABLE !== 'false'
   let version = '0'
   try {
     version = readFileSync(VERSION_PATH, 'utf8').trim()
@@ -145,7 +151,7 @@ export function buildSkillRegistration() {
     source: 'runtime',
     provider: PROVIDER,
     path: SKILL_PATH,
-    invocation: { modelInvocable, userInvocable: true },
+    invocation: { modelInvocable: true, userInvocable: true },
     resourceBase: { kind: 'directory', path: SKILL_ROOT },
     metadata: {
       version,
@@ -158,15 +164,105 @@ export function buildSkillRegistration() {
 }
 
 /**
+ * Absolute path of the profile-scoped settings file.
+ *
+ * The profile directory is the natural owner: parameters apply to the profile
+ * that installed the bundle, and the file survives bundle upgrades.
+ *
+ * @returns {string} settings file path.
+ */
+export function settingsPath() {
+  const profileDir = process.env.DSH_PROFILE_DIR
+  if (profileDir && profileDir.length > 0) return path.join(profileDir, SETTINGS_FILE)
+  const home = process.env.DSH_HOME || path.join(homedir(), '.dsh')
+  return path.join(home, SETTINGS_FILE)
+}
+
+/**
+ * Reject impossible panel values and coerce the rest to the stored shape.
+ *
+ * @param {unknown} raw candidate settings document.
+ * @returns {{ python: string, timeoutMs: number, extraArgs: string[] }} sanitized settings.
+ */
+export function sanitizeSettings(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {}
+  const python = typeof source.python === 'string' ? source.python.trim() : ''
+  const rawTimeout = Number(source.timeoutMs)
+  const timeoutMs = Number.isFinite(rawTimeout)
+    ? Math.min(MAX_TIMEOUT_MS, Math.max(MIN_TIMEOUT_MS, Math.round(rawTimeout)))
+    : DEFAULT_TIMEOUT_MS
+  const seen = new Set()
+  const extraArgs = []
+  if (Array.isArray(source.extraArgs)) {
+    for (const entry of source.extraArgs) {
+      if (typeof entry !== 'string') continue
+      for (const token of entry.split(/\r?\n/)) {
+        const trimmed = token.trim()
+        if (trimmed.length === 0 || trimmed.length > 2000) continue
+        if (seen.has(trimmed)) continue
+        seen.add(trimmed)
+        extraArgs.push(trimmed)
+      }
+    }
+  }
+  return { python, timeoutMs, extraArgs }
+}
+
+/**
+ * Read stored settings; a missing or unreadable file reads as the defaults.
+ *
+ * @returns {{ python: string, timeoutMs: number, extraArgs: string[] }} settings.
+ */
+export function readSettings() {
+  try {
+    const raw = JSON.parse(readFileSync(settingsPath(), 'utf8'))
+    return sanitizeSettings(raw)
+  } catch {
+    return sanitizeSettings({})
+  }
+}
+
+/**
+ * Persist settings atomically (temp file then rename).
+ *
+ * @param {unknown} raw candidate settings document.
+ * @returns {{ python: string, timeoutMs: number, extraArgs: string[] }} stored settings.
+ */
+export function writeSettings(raw) {
+  const settings = sanitizeSettings(raw)
+  const target = settingsPath()
+  mkdirSync(path.dirname(target), { recursive: true })
+  const temporary = `${target}.${process.pid}.tmp`
+  writeFileSync(temporary, `${JSON.stringify(settings, null, 2)}\n`, 'utf8')
+  renameSync(temporary, target)
+  return settings
+}
+
+/**
+ * Read the shared workflow defaults shipped with the skill, for the panel's
+ * read-only summary. A missing or malformed file reports null.
+ *
+ * @returns {Record<string, unknown> | null} parsed defaults.
+ */
+function readWorkflowDefaults() {
+  try {
+    return JSON.parse(readFileSync(DEFAULTS_PATH, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+/**
  * Translate tool arguments into `sjs.py` argv.
  *
  * Options precede the subcommand so the CLI's argument parser always sees them.
  *
  * @param {Record<string, unknown>} args model-supplied arguments.
  * @param {boolean} usesStdin whether the caller supplies `input` on stdin.
+ * @param {string[]} [settingsExtraArgs] profile-level extra arguments, added first.
  * @returns {string[]} argv without the script path.
  */
-export function buildArgs(args, usesStdin) {
+export function buildArgs(args, usesStdin, settingsExtraArgs) {
   const argv = []
   const push = (flag, value) => {
     if (value === undefined || value === null || value === '') return
@@ -190,11 +286,14 @@ export function buildArgs(args, usesStdin) {
   if (args.dryRun === true) argv.push('--dry-run')
   if (args.breakStaleLock === true) argv.push('--break-stale-lock')
   if (args.appendLibrary === true) argv.push('--append-library')
-  if (Array.isArray(args.extraArgs)) {
-    for (const extra of args.extraArgs) {
+  const append = (entries) => {
+    if (!Array.isArray(entries)) return
+    for (const extra of entries) {
       if (typeof extra === 'string' && extra.length > 0) argv.push(extra)
     }
   }
+  append(settingsExtraArgs)
+  append(args.extraArgs)
   if (typeof args.command === 'string' && COMMANDS.includes(args.command)) argv.push(args.command)
   return argv
 }
@@ -280,15 +379,25 @@ function runProcess(executable, argv, options) {
 }
 
 /**
- * Pick a working interpreter by trying candidates until one starts.
+ * Candidate interpreters, in precedence order: settings, `SJS_PYTHON`, defaults.
  *
+ * @param {{ python: string }} settings stored settings.
+ * @returns {string[]} candidates.
+ */
+function pythonCandidates(settings) {
+  const configured = settings.python || process.env.SJS_PYTHON
+  return configured ? [configured] : DEFAULT_PYTHON
+}
+
+/**
+ * Pick a working interpreter by trying candidates until one answers.
+ *
+ * @param {string[]} candidates executable candidates.
  * @param {AbortSignal | undefined} signal cancellation.
  * @param {number} timeoutMs probe bound.
- * @returns {Promise<{ executable: string, probe?: { spawnError?: string } }>} the interpreter.
+ * @returns {Promise<{ executable: string, version: string }>} the interpreter and its version line.
  */
-async function resolveInterpreter(signal, timeoutMs) {
-  const configured = process.env.SJS_PYTHON
-  const candidates = configured ? [configured] : DEFAULT_PYTHON
+async function resolveInterpreter(candidates, signal, timeoutMs) {
   const probeTimeout = Math.min(timeoutMs, 30_000)
   let lastError = 'no python interpreter found'
   for (const candidate of candidates) {
@@ -297,12 +406,14 @@ async function resolveInterpreter(signal, timeoutMs) {
       ['--version'],
       { cwd: SKILL_ROOT, stdin: undefined, signal, timeoutMs: probeTimeout },
     )
-    if (!probe.spawnError) return { executable: candidate }
-    lastError = probe.spawnError
+    if (!probe.spawnError && probe.code === 0) {
+      return { executable: candidate, version: (probe.stdout || probe.stderr).trim() }
+    }
+    lastError = probe.spawnError || (probe.stderr || probe.stdout).trim() || `exit ${probe.code}`
   }
   throw new Error(
     `cannot start a Python 3.11+ interpreter for serial-job-session (${lastError}); ` +
-      'install python or set the SJS_PYTHON environment variable to its executable path',
+      'install python or set the interpreter in Settings → 串行任务参数',
   )
 }
 
@@ -341,6 +452,201 @@ export function renderResultText(value) {
 }
 
 /**
+ * Read and parse a JSON request body with a byte bound.
+ *
+ * @param {import('node:http').IncomingMessage} req request.
+ * @returns {Promise<unknown>} parsed body, or undefined when empty.
+ */
+function readJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let buffered = ''
+    let bytes = 0
+    req.setEncoding('utf8')
+    req.on('data', (chunk) => {
+      bytes += Buffer.byteLength(chunk, 'utf8')
+      if (bytes > MAX_REQUEST_BYTES) {
+        reject(new Error('request body too large'))
+        req.destroy()
+        return
+      }
+      buffered += chunk
+    })
+    req.on('error', reject)
+    req.on('end', () => {
+      if (buffered.trim().length === 0) {
+        resolve(undefined)
+        return
+      }
+      try {
+        resolve(JSON.parse(buffered))
+      } catch {
+        reject(new Error('request body is not valid JSON'))
+      }
+    })
+  })
+}
+
+/**
+ * Refuse obvious cross-site browser writes; the panel is same-origin.
+ *
+ * @param {import('node:http').IncomingMessage} req request.
+ * @returns {boolean} whether the request may proceed.
+ */
+function requestTrusted(req) {
+  const site = req.headers['sec-fetch-site']
+  if (typeof site === 'string' && site !== 'same-origin' && site !== 'none') return false
+  return true
+}
+
+/**
+ * Write one JSON response.
+ *
+ * @param {import('node:http').ServerResponse} res response.
+ * @param {number} status HTTP status.
+ * @param {unknown} value JSON payload.
+ */
+function sendJson(res, status, value) {
+  const body = `${JSON.stringify(value, null, 2)}\n`
+  res.writeHead(status, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+    'content-length': Buffer.byteLength(body, 'utf8'),
+  })
+  res.end(body)
+}
+
+/**
+ * Everything the panel reads in one request.
+ *
+ * @param {{ python: string, timeoutMs: number, extraArgs: string[] }} settings stored settings.
+ * @returns {Record<string, unknown>} state document.
+ */
+function panelState(settings) {
+  let version = '0'
+  try {
+    version = readFileSync(VERSION_PATH, 'utf8').trim()
+  } catch {
+    /* version is informational. */
+  }
+  return {
+    ok: true,
+    plugin: name,
+    version,
+    repoRoot: SKILL_ROOT,
+    cliPath: CLI_PATH,
+    skill: { name: 'serial-job-session', modelInvocable: true },
+    settingsPath: settingsPath(),
+    settings,
+    defaults: readWorkflowDefaults(),
+    candidates: DEFAULT_PYTHON,
+    env: {
+      SJS_PYTHON: process.env.SJS_PYTHON ?? null,
+      SJS_TIMEOUT_MS: process.env.SJS_TIMEOUT_MS ?? null,
+    },
+  }
+}
+
+/**
+ * Register the panel JSON API on the Web carrier, when one is mounted.
+ *
+ * @param {import('cordis').Context} ctx plugin context.
+ */
+function registerPanelRoutes(ctx) {
+  const webServer = ctx.get('webServer')
+  if (!webServer || typeof webServer.register !== 'function') return
+
+  ctx.effect(() =>
+    webServer.register({
+      kind: 'exact',
+      path: `${API_PREFIX}/state`,
+      handler(req, res) {
+        if (req.method !== 'GET') {
+          sendJson(res, 405, { ok: false, error: 'method-not-allowed' })
+          return
+        }
+        if (!requestTrusted(req)) {
+          sendJson(res, 403, { ok: false, error: 'cross-site' })
+          return
+        }
+        sendJson(res, 200, panelState(readSettings()))
+      },
+    }),
+  )
+
+  ctx.effect(() =>
+    webServer.register({
+      kind: 'exact',
+      path: `${API_PREFIX}/settings`,
+      async handler(req, res) {
+        if (req.method !== 'POST') {
+          sendJson(res, 405, { ok: false, error: 'method-not-allowed' })
+          return
+        }
+        if (!requestTrusted(req)) {
+          sendJson(res, 403, { ok: false, error: 'cross-site' })
+          return
+        }
+        const contentType = String(req.headers['content-type'] ?? '')
+        if (!contentType.toLowerCase().includes('application/json')) {
+          sendJson(res, 415, { ok: false, error: 'content-type-must-be-json' })
+          return
+        }
+        try {
+          const body = await readJsonBody(req)
+          const settings = writeSettings(body)
+          ctx.logger?.info?.('serial-job-session settings saved')
+          sendJson(res, 200, { ok: true, settings, settingsPath: settingsPath() })
+        } catch (error) {
+          sendJson(res, 400, {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
+      },
+    }),
+  )
+
+  ctx.effect(() =>
+    webServer.register({
+      kind: 'exact',
+      path: `${API_PREFIX}/probe`,
+      async handler(req, res) {
+        if (req.method !== 'POST') {
+          sendJson(res, 405, { ok: false, error: 'method-not-allowed' })
+          return
+        }
+        if (!requestTrusted(req)) {
+          sendJson(res, 403, { ok: false, error: 'cross-site' })
+          return
+        }
+        const settings = readSettings()
+        const candidates = pythonCandidates(settings)
+        try {
+          const interpreter = await resolveInterpreter(candidates, undefined, 30_000)
+          const cli = await runProcess(
+            interpreter.executable,
+            [CLI_PATH, '--help'],
+            { cwd: SKILL_ROOT, stdin: undefined, signal: undefined, timeoutMs: 30_000 },
+          )
+          sendJson(res, 200, {
+            ok: true,
+            interpreter: interpreter.executable,
+            python: interpreter.version,
+            cli: { ok: cli.code === 0, exitCode: cli.code },
+          })
+        } catch (error) {
+          sendJson(res, 200, {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+            candidates,
+          })
+        }
+      },
+    }),
+  )
+}
+
+/**
  * Build the `sjs` tool definition.
  *
  * @param {import('cordis').Context} ctx plugin context.
@@ -355,7 +661,8 @@ function buildTool(ctx) {
       'an append-only event with `apply` (or the `start` shortcut). Feed JSON payloads through `input`; they ' +
       'travel to the CLI on stdin. Never pass `human: true` unless a real human gave the instruction in this ' +
       'conversation, and never invent evidence. The CLI returns UTF-8 JSON; a non-zero exit is reported as a ' +
-      'tool error carrying the CLI diagnostics.',
+      'tool error carrying the CLI diagnostics. Interpreter, timeout and extra arguments come from the ' +
+      'plugin settings page (Settings → 串行任务参数) unless the environment overrides them.',
     parameters: {
       type: 'object',
       additionalProperties: false,
@@ -414,7 +721,7 @@ function buildTool(ctx) {
         extraArgs: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Raw extra CLI arguments, appended last, for a flag this schema does not name.',
+          description: 'Raw extra CLI arguments for this call only, appended after the profile-level ones.',
         },
       },
     },
@@ -439,12 +746,13 @@ function buildTool(ctx) {
       if (!COMMANDS.includes(args.command)) {
         throw new Error(`unsupported sjs command: ${String(args.command)}`)
       }
+      const settings = readSettings()
       const hasInput = args.input !== undefined && args.input !== null
       const stdin = hasInput ? JSON.stringify(args.input) : undefined
-      const argv = buildArgs(args, hasInput)
+      const argv = buildArgs(args, hasInput, settings.extraArgs)
       const cwd = await resolveWorkingDirectory(ctx, exec)
-      const timeoutMs = Number(process.env.SJS_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS
-      const interpreter = await resolveInterpreter(exec.signal, timeoutMs)
+      const timeoutMs = Number(process.env.SJS_TIMEOUT_MS) || settings.timeoutMs || DEFAULT_TIMEOUT_MS
+      const interpreter = await resolveInterpreter(pythonCandidates(settings), exec.signal, timeoutMs)
       const outcome = await runProcess(interpreter.executable, [CLI_PATH, ...argv], {
         cwd,
         stdin,
@@ -494,11 +802,21 @@ function buildTool(ctx) {
 }
 
 /**
- * Register the skill and the tool.
+ * Register the skill, the tool and the panel API.
+ *
+ * The services are looked up optionally so a profile without the skill registry,
+ * the tool registry or a Web carrier still loads the rest instead of throwing.
  *
  * @param {import('cordis').Context} ctx plugin context.
  */
 export function apply(ctx) {
-  ctx.effect(() => ctx.skills.register(buildSkillRegistration()))
-  ctx.effect(() => ctx.tools.register(buildTool(ctx)))
+  const skills = ctx.get('skills')
+  if (skills && typeof skills.register === 'function') {
+    ctx.effect(() => skills.register(buildSkillRegistration()))
+  }
+  const tools = ctx.get('tools')
+  if (tools && typeof tools.register === 'function') {
+    ctx.effect(() => tools.register(buildTool(ctx)))
+  }
+  registerPanelRoutes(ctx)
 }

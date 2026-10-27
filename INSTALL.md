@@ -16,8 +16,9 @@
 
 本仓根目录的 `package.json` 声明了 `dsh.bundle.patch`，因此整个仓库就是一个 DSH bundle。安装后：
 
-- `SKILL.md` 被注册为 Harness skill `serial-job-session`，资源根是本仓目录（`references/`、`schemas/` 仍在原位读取）。
+- `SKILL.md` 被注册为 Harness skill `serial-job-session`，资源根是本仓目录（`references/`、`schemas/` 仍在原位读取），且允许模型按需加载。
 - 新增 `sjs` 工具，在调用会话的工作目录里执行 `python scripts/sjs.py`，参数与 CLI 同名，JSON 负载从 stdin 传入。
+- 设置页新增**「串行任务」**面板（`settings.section`，`dsh/client.js`）：解释器、超时、额外 CLI 参数，保存后下一次调用生效；另有环境检测与只读信息。参数存 `$DSH_HOME`（默认 `~/.dsh`）下的 `serial-job-session.json`，由 `GET /serial-job-session/api/state`、`POST /serial-job-session/api/settings`、`POST /serial-job-session/api/probe` 读写（仅同源、要求 JSON 请求体）。
 - 插件页显示标题/说明/图标，来自 `dsh/locale/{en,zh}.json` 与 `dsh/icon.svg`。
 
 安装（二选一，勿混用）：
@@ -32,13 +33,12 @@ dsh plugin add github:FMJ9922/serial-job-session
 
 也可以在 DSH 会话里让 agent 调 `plugin_manager` 的 `install_bundle`，`target` 填本仓绝对路径；`application: applied` 才表示已生效，`restart-required` 需要重启 Harness。
 
-配置项（环境变量，需在启动 DSH 前设置）：
+环境变量（可选，需在启动 DSH 前设置；优先于面板设置）：
 
 | 变量 | 默认 | 含义 |
 |---|---|---|
 | `SJS_PYTHON` | 依次尝试 `python`、`python3`、`py` | Python 3.11+ 解释器路径 |
 | `SJS_TIMEOUT_MS` | `120000` | 单次 `sjs` 调用超时 |
-| `SJS_MODEL_INVOCABLE` | `true` | 设为 `false` 时回到“只由人显式加载”，与 `SKILL.md` 的 `disable-model-invocation: true` 对齐 |
 
 注意：**不要把本仓同时复制/克隆到 `~/.dsh/skills` 或项目 `.dsh/skills`**。同名时文件系统来源会遮蔽插件注册（实测会出现模型侧看不到该 skill 的现象）；只保留一种安装方式。
 
@@ -46,6 +46,7 @@ dsh plugin add github:FMJ9922/serial-job-session
 
 ```bash
 node --check dsh/index.js
+node --check dsh/client.js
 node --test dsh/plugin.test.mjs
 ```
 

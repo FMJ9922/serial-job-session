@@ -39,15 +39,28 @@ python scripts/sjs.py context --instance <project>/.cursor/workflows/demo
 - 本地目录（开发、跟随本仓改动）：在 DSH 里执行 `dsh plugin add <本仓绝对路径>`，或让 agent 调 `plugin_manager` 的 `install_bundle`，target 填本仓绝对路径。
 - 从 GitHub：`dsh plugin add github:FMJ9922/serial-job-session`。
 
-安装后可以在插件页看到「串行任务会话」，新会话的 skill 目录出现 `serial-job-session`，`sjs` 工具可用。依赖 Python 3.11+；`python` 不在 PATH 时用环境变量 `SJS_PYTHON` 指定解释器，`SJS_TIMEOUT_MS` 调整单次调用超时（默认 120000 ms）。
+安装后可以在插件页看到「串行任务会话」，新会话的 skill 目录出现 `serial-job-session`，`sjs` 工具可用；设置页会多一个**「串行任务」**页面用来调参数（见下）。依赖 Python 3.11+；`python` 不在 PATH 时用环境变量 `SJS_PYTHON` 指定解释器，`SJS_TIMEOUT_MS` 调整单次调用超时（默认 120000 ms）。
 
-三点与纯 skill 安装的差别：
+### 参数面板（Web UI）
+
+设置 → **串行任务**（`settings.section`）里可以改插件自己的运行参数，保存后下一次 `sjs` 调用立即生效，不需要重启 Harness：
+
+| 参数 | 说明 |
+|---|---|
+| Python 解释器 | 留空为自动探测；优先顺序：`SJS_PYTHON` 环境变量 → 面板设置 → `python` / `python3` / `py`。 |
+| 单次调用超时（毫秒） | 1000–600000；`SJS_TIMEOUT_MS` 环境变量优先。 |
+| 额外 CLI 参数 | 每行一个，追加到每次 `sjs` 调用的命令行（例如 `--append-library`）。 |
+
+面板还提供「检测环境」（探测解释器版本并验证 CLI 可启动）和只读信息（仓库目录、CLI 路径、skill 名、配置文件位置、版本、共享 `defaults.json` 摘要）。参数存放在 `$DSH_HOME`（默认 `~/.dsh`）下的 `serial-job-session.json`，由插件自己的 JSON 接口读写：`GET /serial-job-session/api/state`、`POST /serial-job-session/api/settings`、`POST /serial-job-session/api/probe`（仅同源、要求 JSON 请求体）。
+
+创建实例的选择（决策模式、门槛、失败处置、估分/飞书开关）仍在 `init` 时按治理确认，面板不提供这些开关——它们属于实例合同，不该被全局默认悄悄改掉。
+
+两点与纯 skill 安装的差别：
 
 1. **不要再把本仓复制/克隆到 `~/.dsh/skills` 或项目 `.dsh/skills`。** 同名时文件系统来源会遮蔽插件的注册（本机实测：先注册的文件系统副本盖住了插件注册，且它带 `disable-model-invocation: true`，结果模型侧看不到该 skill）。只保留一种安装方式。
-2. 插件注册默认允许模型按需加载（`invocation.modelInvocable: true`）。这偏离 `SKILL.md` 里给文件系统来源写的 `disable-model-invocation: true`；原因见下。要严格保持“只由人显式加载”，启动 DSH 前设 `SJS_MODEL_INVOCABLE=false`。
-3. 入口只有一处：`dsh/index.js`（Host 半）+ `dsh/cordis.patch.yml`（插入 row）+ `dsh/locale/{en,zh}.json`、`dsh/icon.svg`（插件页信息）+ `dsh/plugin.test.mjs`（离线校验，`node --test dsh/plugin.test.mjs`）。`scripts/`、`references/`、`schemas/` 仍是唯一事实源，插件只是把它们接进 Harness。
+2. 入口只有一处：`dsh/index.js`（Host 半：skill、`sjs` 工具、参数文件与 JSON 接口）+ `dsh/client.js`（参数面板）+ `dsh/cordis.patch.yml`（插入 row）+ `dsh/locale/{en,zh}.json`、`dsh/icon.svg`（插件页信息）+ `dsh/plugin.test.mjs`（离线校验，`node --test dsh/plugin.test.mjs`）。`scripts/`、`references/`、`schemas/` 仍是唯一事实源，插件只是把它们接进 Harness。
 
-为什么默认允许模型加载：Harness 的 skill 目录就是它按需加载的入口，条目描述已写明“仅在明确点名、`route_key：意图` 或已绑定工作流时使用，不是普通任务的默认框架”。若你更希望完全由人显式点名，用第 2 条的开关关掉即可。
+插件注册**允许模型按需加载**（`invocation.modelInvocable: true`）。这偏离 `SKILL.md` 里给文件系统来源写的 `disable-model-invocation: true`，因为 Harness 的 skill 目录就是它按需加载的入口；条目描述已写明“仅在明确点名、`route_key：意图` 或已绑定工作流时使用，不是普通任务的默认框架”。
 
 维护注意：`check_skill_integrity.py` 已把 `dsh/`、`node_modules/` 与根 `package.json` 从 skill 文本基线中排除，插件打包文件不计入母版完整性。
 

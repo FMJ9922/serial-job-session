@@ -27,6 +27,8 @@ jobs:
         with:
           node-version: "22"
       - name: DSH bundle syntax
-        run: node --check dsh/index.js
+        run: |
+          node --check dsh/index.js
+          node --check dsh/client.js
       - name: DSH bundle tests
         run: node --test dsh/plugin.test.mjs
