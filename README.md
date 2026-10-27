@@ -1,3 +1,5 @@
+简体中文 | [English](README.en.md)
+
 # serial-job-session
 
 **人类把关的串行任务协议：一次一张卡，一张卡一个合同，先有证据再验收。**

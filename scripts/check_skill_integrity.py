@@ -27,6 +27,7 @@ TRACKED_SUFFIXES = {".md", ".py", ".json"}
 EXCLUDED_NAMES = {
     "skill-integrity.json",
     "README.md",
+    "README.en.md",
     "CHANGELOG.md",
     "AUTHORS.md",
     "CONTRIBUTING.md",

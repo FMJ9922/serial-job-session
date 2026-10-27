@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- 增加英文 README（`README.en.md`）与两份 README 顶部的中英文切换入口；中文仍为默认首页。
+- 说明：GitHub 不支持按浏览器语言自动切换 README，切换通过顶部链接完成。
+
 ## 4.0.0 — 2026-10-27
 
 首个开源版本（MIT）。

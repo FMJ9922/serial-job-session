@@ -1,7 +1,7 @@
 {
   "schema": "serial-job-session-integrity/v1",
   "protocol_version": "4.0.0",
-  "generated_at": "2026-10-27T18:36:13+08:00",
+  "generated_at": "2026-10-27T18:46:16+08:00",
   "files": {
     "CREDITS.md": "0ee6eed00d0e954ab122767059677662feea7c66f60e6c45bb04cd97d4e1bc88",
     "DELEGATION.md": "4ca0db3a7ec2dea081de715997a0941f65178a00556615f71ca66e68bd5bd865",
@@ -43,7 +43,7 @@
     "schemas/worker-result.schema.json": "cceb59e322e82e3c1ef6425b02187b6b1c94766c31f17d95ce54aecf937d8b7c",
     "scripts/calendar_hours.py": "78d1d6a03229a145169b1874443577bfb545265efe491a642e877fb75866f1df",
     "scripts/calibrate.py": "9a4d6169107808fcb2b417f289051b71f899f571021471707e165eaf259028da",
-    "scripts/check_skill_integrity.py": "d0606e2b8839a9b2432e70accceab17695823ef5486a3e9896876e8c339ea1b2",
+    "scripts/check_skill_integrity.py": "c9650fcacc2543857927db75afdb4e6595a3a2b391796393822cb6db963d81b0",
     "scripts/close_transaction.py": "ce5acc689994a2d2f6efefeae0b5b40cfd27c5a34257d72850d689638077a339",
     "scripts/estimate_stats.py": "bad8cf2d992d88e8089ce54922b1c9e01ca66a98a1a9f654a71660ed8439abce",
     "scripts/feishu_sync.py": "8442d099030fe7d8f463a47505cc8078dc84d50b97f5ad1c6bcb3600094ee010",
