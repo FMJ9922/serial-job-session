@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "串行任务会话",
-    "description": "把 serial-job-session v5 工作流接入 Harness：注册为 skill，新增 `sjs` 工具调用本地 CLI，并提供解释器、超时与额外参数的设置页。"
+    "description": "把 AI 长任务变成「有合同、有版本、有证据」的串行作业流：断会话不丢上下文，验收有据可查。附带 sjs 工具与参数面板。"
   }
 }

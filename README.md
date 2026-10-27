@@ -41,7 +41,18 @@ python scripts/sjs.py context --instance <project>/.cursor/workflows/demo
 
 安装后可以在插件页看到「串行任务会话」，新会话的 skill 目录出现 `serial-job-session`，`sjs` 工具可用；设置页会多一个**「串行任务」**页面用来调参数（见下）。依赖 Python 3.11+；`python` 不在 PATH 时用环境变量 `SJS_PYTHON` 指定解释器，`SJS_TIMEOUT_MS` 调整单次调用超时（默认 120000 ms）。
 
-版本说明：`package.json` 里的 `version` 是**插件版本**（当前 `5.1.0`，对应的 git tag 是 `v5.1.0`）；仓库根的 `VERSION` 是 **skill 协议版本**（`5.0.0`，实例的模板身份只看它）。两者独立演进：升级插件不会让已有实例报 `TEMPLATE_CHANGED`，改 skill 协议才需要按 INSTALL 的说明重绑定模板。
+版本说明：`package.json` 里的 `version` 是**插件版本**（当前 `5.1.1`，对应的 git tag 是 `v5.1.0`；5.1.1 是文案补全，未打新 tag）；仓库根的 `VERSION` 是 **skill 协议版本**（`5.0.0`，实例的模板身份只看它）。两者独立演进：升级插件不会让已有实例报 `TEMPLATE_CHANGED`，改 skill 协议才需要按 INSTALL 的说明重绑定模板。
+
+### 这个插件解决什么
+
+把长任务从「聊天里的即兴执行」变成「有合同、有版本、有证据的串行作业」：
+
+- **断会话不丢进度**：进度写进实例文件（追加式 JSONL），`context` 一屏恢复当前卡、授权与菜单。
+- **验收有据**：任务卡带合同、必验项与证据路径，独立 reviewer 逐项判定；失败或未知的必验项不会被评分洗白。
+- **授权不越界**：人工主导 / 条件自治 / 全 AI 三种模式，批准带来源，agent 不能冒充人类；模式没有默认值。
+- **成本可控**：默认 12000 字符上下文预算，日志按 20 张卡 / 512 KiB 分片；估分与飞书镜像默认关闭，关闭时不探活。
+
+适合跨会话、多阶段、需要证据的工程任务（UI 改造、重构、迁移、批量修复）和需要独立验收的交付；不适合一次性小改或纯问答。完整介绍见 [dsh/INTRO.md](dsh/INTRO.md)（[English](dsh/INTRO.en.md)）。
 
 ### 参数面板（Web UI）
 

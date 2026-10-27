@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Serial Job Session",
-    "description": "Adds the serial-job-session v5 workflow as a Harness skill, an `sjs` tool that runs its local CLI, and a settings page for the interpreter, timeout and extra arguments."
+    "description": "Turns a long AI task into a serial workflow with a contract, versions and evidence: a dropped session never loses context, and acceptance rests on evidence. Includes the sjs tool and a settings panel."
   }
 }

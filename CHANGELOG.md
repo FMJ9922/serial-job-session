@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.1.1 — 2026-10-27
+
+- 插件页补全介绍：bundle 详情页与设置页的面板新增「这个插件是什么 / 解决的问题 / 适合与不适合 / 怎么用 / 注意事项」，并附完整介绍链接。
+- 新增 `dsh/INTRO.md`（中文）与 `dsh/INTRO.en.md`（英文）完整介绍；中英 README 的 DSH 章节补精简版。
+- 插件卡片短描述改为定位型一句话（`dsh/locale/{en,zh}.json`），`package.json` 的 `description` 同步。
+
 ## 5.1.0 — 2026-10-27
 
 首个 DSH 插件版本（`package.json` 的 `dsh-serial-job-session@5.1.0`；skill 协议版本仍是 `VERSION` 的 5.0.0）。

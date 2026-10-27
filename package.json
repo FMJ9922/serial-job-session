@@ -1,7 +1,7 @@
 {
   "name": "dsh-serial-job-session",
-  "version": "5.1.0",
-  "description": "DSH bundle for serial-job-session v5: the skill, an `sjs` tool that runs its local CLI, and a settings panel for interpreter, timeout and extra arguments.",
+  "version": "5.1.1",
+  "description": "Contract-and-evidence workflow for long AI tasks: the serial-job-session v5 skill, an `sjs` tool that runs its local CLI, and a settings panel for interpreter, timeout and extra arguments.",
   "type": "module",
   "license": "MIT",
   "author": "沈劢 (shenmai@taiyouxi.cn)",
@@ -29,6 +29,8 @@
     "dsh/cordis.patch.yml",
     "dsh/locale/*.json",
     "dsh/icon.svg",
+    "dsh/INTRO.md",
+    "dsh/INTRO.en.md",
     "dsh/plugin.test.mjs",
     "scripts/**/*.py",
     "references/*.md",

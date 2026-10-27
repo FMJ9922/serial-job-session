@@ -60,6 +60,26 @@ window.__ModuleLoader__.load({
       saveFailed: '保存失败',
       enabled: '允许',
       invalidTimeout: '超时必须是不小于 1000 的整数',
+      aboutTitle: '这个插件是什么',
+      positioning: '把 AI 的长任务变成「有合同、有版本、有证据」的串行作业流：断会话不丢进度，验收不靠印象。',
+      problemsTitle: '解决的问题',
+      problem1: '任务跨会话、跨天就丢了进度 → 进度写进实例文件，不依赖聊天记忆',
+      problem2: '“做完了”没有证据，评审靠感觉 → 每张卡有合同、必验项和证据路径，独立 reviewer 逐项判定',
+      problem3: '返工失控、越做越偏 → 首实现后默认最多返工 3 次，失败保留成果且不阻塞独立任务',
+      problem4: 'agent 自己“授权” → 三种决策模式，授权边界写进合同，agent 不能冒充人类批准',
+      fitTitle: '适合与不适合',
+      fitGood: '适合：跨会话、多阶段、需要证据的工程任务（UI 改造、重构、迁移、批量修复），以及需要独立验收的交付。',
+      fitBad: '不适合：一次性小改动、纯问答，或要求完全无人值守且不得留下失败记录的场景——本工作流如实记录失败，不掩盖。',
+      usageTitle: '怎么用',
+      usage1: '创建实例：让 agent 跑 sjs init --dry-run，确认目标、授权路径、决策模式与失败处置（模式没有默认值）。',
+      usage2: '日常推进：说 route_key：意图（如 界面优化：推进），或让 agent 用 sjs context 读取当前任务。',
+      usage3: '收口：实现 → 自检 → 独立 reviewer 验收 → 结案，并把有证据的经验沉淀下来。',
+      usage4: '调参数：解释器、超时与额外 CLI 参数在本页调整，保存后下一次调用生效。',
+      note1: '注意：不要把仓库同时复制进 ~/.dsh/skills，同名会遮蔽插件注册。',
+      note2: '注意：首次安装后需要重启一次 Harness，插件页才会加载这段说明与参数区。',
+      learnMore: '完整介绍',
+      learnMoreZh: '中文说明',
+      learnMoreEn: 'English guide',
     }
 
     const EN = {
@@ -97,6 +117,27 @@ window.__ModuleLoader__.load({
       saveFailed: 'Save failed',
       enabled: 'allowed',
       invalidTimeout: 'Timeout must be an integer of at least 1000',
+      aboutTitle: 'What this plugin is',
+      positioning:
+        'Turns a long AI task into a serial workflow with a contract, versions and evidence: a dropped session never loses progress, and acceptance rests on evidence, not impressions.',
+      problemsTitle: 'Problems it solves',
+      problem1: 'Progress dies with the session → it lives in the instance files, not in chat memory',
+      problem2: '“Done” without evidence → every card carries a contract, mandatory checks and evidence paths, judged one by one by an independent reviewer',
+      problem3: 'Runaway rework → at most three rework rounds after first implementation; exhausted work is preserved and never blocks independent tasks',
+      problem4: 'Agents “authorizing” themselves → three decision modes, the authorization boundary lives in the contract, and no agent can impersonate human approval',
+      fitTitle: 'When to use it',
+      fitGood: 'Good fit: multi-session, multi-stage engineering work that needs evidence (UI rework, refactors, migrations, batch fixes) and deliveries requiring independent acceptance.',
+      fitBad: 'Poor fit: one-shot small changes, pure Q&A, or fully unattended runs that must never record a failure — this workflow records failures truthfully instead of hiding them.',
+      usageTitle: 'How to use it',
+      usage1: 'Create an instance: have the agent run sjs init --dry-run and confirm goal, authorized paths, decision mode and failure handling (the mode has no default).',
+      usage2: 'Work day to day: say route_key：意图 (for example 界面优化：推进), or have the agent read the current card with sjs context.',
+      usage3: 'Close out: implement → self-check → independent reviewer acceptance → close, and record the evidence-backed lessons.',
+      usage4: 'Tune it: interpreter, timeout and extra CLI arguments live in this page and apply on the next call.',
+      note1: 'Note: do not also copy this repository into ~/.dsh/skills — a same-named entry shadows the bundle registration.',
+      note2: 'Note: after the first installation the Harness needs one restart before this page and its settings load.',
+      learnMore: 'Full introduction',
+      learnMoreZh: '中文说明',
+      learnMoreEn: 'English guide',
     }
 
     /** Styles rendered inside the component, so unmounting removes them. */
@@ -104,6 +145,11 @@ window.__ModuleLoader__.load({
 .sjs-panel { display: flex; flex-direction: column; gap: 18px; max-width: 760px; color: var(--dsw-alias-label-primary); font-size: 13px; }
 .sjs-panel h2 { margin: 0; font-size: 16px; font-weight: 600; }
 .sjs-intro { margin: 0; color: var(--dsw-alias-label-secondary); line-height: 1.6; }
+.sjs-positioning { margin: 0; color: var(--dsw-alias-label-primary); line-height: 1.65; font-weight: 500; }
+.sjs-subtitle { margin: 4px 0 0; font-size: 12px; font-weight: 600; color: var(--dsw-alias-label-secondary); }
+.sjs-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; line-height: 1.6; }
+.sjs-link { color: var(--dsw-alias-brand-primary); text-decoration: none; }
+.sjs-link:hover { text-decoration: underline; }
 .sjs-group { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); }
 .sjs-group-title { margin: 0 0 2px; font-size: 13px; font-weight: 600; }
 .sjs-field { display: flex; flex-direction: column; gap: 6px; }
@@ -277,9 +323,57 @@ window.__ModuleLoader__.load({
       const heading = h('h2', null, t('title'))
       const intro = h('p', { className: 'sjs-intro' }, t('intro'))
       const style = h('style', null, CSS)
+      const about = h(
+        'section',
+        { className: 'sjs-group' },
+        h('h3', { className: 'sjs-group-title' }, t('aboutTitle')),
+        h('p', { className: 'sjs-positioning' }, t('positioning')),
+        h('h4', { className: 'sjs-subtitle' }, t('problemsTitle')),
+        h(
+          'ul',
+          { className: 'sjs-list' },
+          ['problem1', 'problem2', 'problem3', 'problem4'].map((key) => h('li', { key }, t(key))),
+        ),
+        h('h4', { className: 'sjs-subtitle' }, t('fitTitle')),
+        h('ul', { className: 'sjs-list' }, h('li', null, t('fitGood')), h('li', null, t('fitBad'))),
+        h('h4', { className: 'sjs-subtitle' }, t('usageTitle')),
+        h(
+          'ol',
+          { className: 'sjs-list' },
+          ['usage1', 'usage2', 'usage3', 'usage4'].map((key) => h('li', { key }, t(key))),
+        ),
+        h('p', { className: 'sjs-hint' }, t('note1')),
+        h('p', { className: 'sjs-hint' }, t('note2')),
+        h(
+          'p',
+          { className: 'sjs-hint' },
+          `${t('learnMore')}：`,
+          h(
+            'a',
+            {
+              className: 'sjs-link',
+              href: 'https://github.com/FMJ9922/serial-job-session/blob/main/dsh/INTRO.md',
+              target: '_blank',
+              rel: 'noreferrer',
+            },
+            t('learnMoreZh'),
+          ),
+          ' · ',
+          h(
+            'a',
+            {
+              className: 'sjs-link',
+              href: 'https://github.com/FMJ9922/serial-job-session/blob/main/dsh/INTRO.en.md',
+              target: '_blank',
+              rel: 'noreferrer',
+            },
+            t('learnMoreEn'),
+          ),
+        ),
+      )
 
       if (loading) {
-        return h('div', { className: 'sjs-panel' }, style, heading, intro, h('p', { className: 'sjs-empty' }, t('loading')))
+        return h('div', { className: 'sjs-panel' }, style, heading, intro, about, h('p', { className: 'sjs-empty' }, t('loading')))
       }
 
       if (error) {
@@ -289,6 +383,7 @@ window.__ModuleLoader__.load({
           style,
           heading,
           intro,
+          about,
           h('p', { className: 'sjs-status sjs-status-error' }, `${t('loadFailed')}: ${error}`),
           h('div', { className: 'sjs-actions' }, h('button', { type: 'button', className: 'sjs-button', onClick: load }, t('retry'))),
         )
@@ -310,6 +405,7 @@ window.__ModuleLoader__.load({
         style,
         heading,
         intro,
+        about,
         h(
           'section',
           { className: 'sjs-group' },

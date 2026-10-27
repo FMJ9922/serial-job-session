@@ -29,7 +29,18 @@ Pick one installation (do not mix them):
 
 After installation the Plugins page lists **Serial Job Session**, new sessions advertise `serial-job-session`, the `sjs` tool is available, and Settings gains a **Serial Jobs** page for the plugin's parameters (below). Python 3.11+ is required; set `SJS_PYTHON` when `python` is not on `PATH`, and `SJS_TIMEOUT_MS` to change the per-call timeout (default 120000 ms).
 
-Version note: `package.json`'s `version` is the **plugin version** (currently `5.1.0`, shipped as git tag `v5.1.0`); the repository's `VERSION` file is the **skill protocol version** (`5.0.0`, the only input to an instance's template identity). They move independently: upgrading the plugin never reports `TEMPLATE_CHANGED` for existing instances; a protocol change requires the rebind described in INSTALL.
+Version note: `package.json`'s `version` is the **plugin version** (currently `5.1.1`; git tag `v5.1.0` covers the functional release, 5.1.1 is the copy/documentation pass and has no new tag yet); the repository's `VERSION` file is the **skill protocol version** (`5.0.0`, the only input to an instance's template identity). They move independently: upgrading the plugin never reports `TEMPLATE_CHANGED` for existing instances; a protocol change requires the rebind described in INSTALL.
+
+### What this plugin solves
+
+It moves a long task from improvised chat execution to a serial job with a contract, versions and evidence:
+
+- **A dropped session never loses progress**: progress lives in instance files (append-only JSONL), and `context` restores the current card, authorization and menu in one read.
+- **Acceptance rests on evidence**: every card carries a contract, mandatory checks and evidence paths; an independent reviewer judges each item, and a failed or unknown mandatory check cannot be overridden by a score.
+- **Authorization stays bounded**: manual / conditional / full-AI modes, approvals that carry their source, and no agent can impersonate a human; the mode has no default.
+- **Bounded cost**: a 12000-character context budget by default, logs rotating at 20 cards or 512 KiB, and estimate/Feishu modules off (no probing while off).
+
+Good fit: multi-session, multi-stage engineering work that needs evidence (UI rework, refactors, migrations, batch fixes) and deliveries requiring independent acceptance. Poor fit: one-shot small changes or pure Q&A. Full introduction: [dsh/INTRO.en.md](dsh/INTRO.en.md) ([中文](dsh/INTRO.md)).
 
 ### Parameter panel (Web UI)
 
