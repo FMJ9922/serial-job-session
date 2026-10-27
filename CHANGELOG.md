@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.1.3 — 2026-10-28
+
+修复 cp936（GBK 控制台）下 `sjs` 工具传中文 payload 直接崩溃。
+
+- 根因：Windows 管道 stdin 按控制台代码页解码，Node 写入的 UTF-8 中文在 `sjs.py` 里被按 GBK 解读成孤立代理项，随后 re-encode 抛 `'utf-8' codec can't encode character … surrogates not allowed`。
+- 宿主侧（`dsh/index.js`）为每个 Python 子进程强制 `PYTHONUTF8=1` + `PYTHONIOENCODING=utf-8`（新增 `pythonEnv()`），解释器探测、`sjs` 调用与面板「检测环境」共用。不再依赖宿主机控制台代码页。
+- 新增 `npm run smoke:stdin`（`dsh/smoke-stdin.mjs`）：用真实 CLI + 中文 payload + stdin 跑 `init --dry-run`，断言中文往返无损；CI 执行。
+- `dsh/check-pack.mjs` 与 `dsh/smoke-stdin.mjs` 补进 npm `files`（此前 `smoke:pack` 指向的文件没打包）。
+- 离线校验增至 22 项。
+- 说明：本次只改宿主侧，未触碰完整性基线内的 `scripts/sjs.py`，已有实例不会报 `TEMPLATE_INTEGRITY_FAILED` / `TEMPLATE_CHANGED`；手动在 cp936 下用 `--input -` 时仍需自行设 `PYTHONUTF8=1`，或改用 `--input <utf8.json>`。
+
 ## 5.1.2 — 2026-10-28
 
 修复 npm 安装包缺文件导致的启动失败（5.1.0/5.1.1 的 npm 包受影响，GitHub/本地目录安装不受影响）。

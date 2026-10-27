@@ -34,3 +34,5 @@ jobs:
         run: node --test dsh/plugin.test.mjs
       - name: npm tarball smoke
         run: node dsh/check-pack.mjs
+      - name: stdin UTF-8 smoke
+        run: node dsh/smoke-stdin.mjs

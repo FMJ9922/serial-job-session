@@ -89,6 +89,21 @@ const MAX_TIMEOUT_MS = 600_000
 const MAX_OUTPUT_CHARS = 30_000
 /** Upper bound on a panel request body. */
 const MAX_REQUEST_BYTES = 64 * 1024
+/**
+ * Environment for every Python child process.
+ *
+ * On Windows the console code page (for example cp936) decides how a piped
+ * stdin is decoded, so Node writing UTF-8 JSON made `sjs.py` decode GBK and
+ * produce lone surrogates, which then failed to re-encode. Forcing UTF-8 in the
+ * child removes the dependency on the host's code page.
+ *
+ * @param {NodeJS.ProcessEnv} [base] base environment; defaults to this process.
+ * @returns {NodeJS.ProcessEnv} environment with UTF-8 forced for Python.
+ */
+export function pythonEnv(base = process.env) {
+  return { ...base, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' }
+}
+
 /** Candidate interpreters, in order, when neither settings nor `SJS_PYTHON` name one. */
 const DEFAULT_PYTHON = ['python3', 'python', 'py']
 /** Minimum Python the CLI supports. */
@@ -340,7 +355,7 @@ function runProcess(executable, argv, options) {
       child = spawn(executable, argv, {
         cwd: options.cwd,
         windowsHide: true,
-        env: process.env,
+        env: pythonEnv(),
         stdio: ['pipe', 'pipe', 'pipe'],
       })
     } catch (error) {

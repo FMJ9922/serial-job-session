@@ -25,6 +25,7 @@ import {
   name,
   parseFrontMatter,
   parsePythonVersion,
+  pythonEnv,
   readSettings,
   renderResultText,
   REQUIRED_RUNTIME_FILES,
@@ -159,6 +160,14 @@ test('package.json ships the integrity baseline and every runtime file', () => {
   assert.ok(listed.has('dsh/index.js'))
   assert.ok(listed.has('dsh/client.js'))
   assert.ok(listed.has('scripts/**/*.py'), 'the CLI tree must be packed')
+})
+
+test('Python children get UTF-8 forced, independent of the console code page', () => {
+  const env = pythonEnv({ PATH: 'x', PYTHONUTF8: '0' })
+  assert.equal(env.PYTHONUTF8, '1')
+  assert.equal(env.PYTHONIOENCODING, 'utf-8')
+  assert.equal(env.PATH, 'x')
+  assert.equal(pythonEnv().PYTHONUTF8, '1')
 })
 
 test('Python probe parses banners and rejects anything below 3.11', () => {
