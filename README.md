@@ -41,6 +41,8 @@ python scripts/sjs.py context --instance <project>/.cursor/workflows/demo
 
 安装后可以在插件页看到「串行任务会话」，新会话的 skill 目录出现 `serial-job-session`，`sjs` 工具可用；设置页会多一个**「串行任务」**页面用来调参数（见下）。依赖 Python 3.11+；`python` 不在 PATH 时用环境变量 `SJS_PYTHON` 指定解释器，`SJS_TIMEOUT_MS` 调整单次调用超时（默认 120000 ms）。
 
+版本说明：`package.json` 里的 `version` 是**插件版本**（当前 `5.1.0`，对应的 git tag 是 `v5.1.0`）；仓库根的 `VERSION` 是 **skill 协议版本**（`5.0.0`，实例的模板身份只看它）。两者独立演进：升级插件不会让已有实例报 `TEMPLATE_CHANGED`，改 skill 协议才需要按 INSTALL 的说明重绑定模板。
+
 ### 参数面板（Web UI）
 
 设置 → **串行任务**（`settings.section`）里可以改插件自己的运行参数，保存后下一次 `sjs` 调用立即生效，不需要重启 Harness：

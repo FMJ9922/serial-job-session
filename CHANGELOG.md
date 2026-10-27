@@ -1,11 +1,14 @@
 # Changelog
 
-## Unreleased
+## 5.1.0 — 2026-10-27
 
-- 插件新增 Web UI 参数面板：设置页「串行任务」可调整 Python 解释器、单次超时与额外 CLI 参数，保存后下一次 `sjs` 调用生效；含环境检测与只读信息。参数存 profile 目录 `serial-job-session.json`，经 `GET /serial-job-session/api/state`、`POST /serial-job-session/api/settings`、`POST /serial-job-session/api/probe` 读写。
+首个 DSH 插件版本（`package.json` 的 `dsh-serial-job-session@5.1.0`；skill 协议版本仍是 `VERSION` 的 5.0.0）。
+
+- 插件新增 Web UI 参数面板：设置页「串行任务」可调整 Python 解释器、单次超时与额外 CLI 参数，保存后下一次 `sjs` 调用生效；含环境检测与只读信息。参数存 `$DSH_HOME`（默认 `~/.dsh`）下的 `serial-job-session.json`，经 `GET /serial-job-session/api/state`、`POST /serial-job-session/api/settings`、`POST /serial-job-session/api/probe` 读写。
 - 插件注册改为允许模型按需加载（`invocation.modelInvocable: true`），移除 `SJS_MODEL_INVOCABLE` 开关。
 - 新增 DSH bundle：根 `package.json` 声明 `dsh.bundle.patch` 与 `dsh.client`，`dsh/index.js` 把 `SKILL.md` 注册为 Harness skill `serial-job-session` 并新增 `sjs` 工具（在会话工作目录调用 `scripts/sjs.py`，JSON 走 stdin）。
-- 插件显示信息：`dsh/locale/{en,zh}.json` 与 `dsh/icon.svg`；离线校验 `dsh/plugin.test.mjs`（`node --test`，17 项覆盖 skill 构建、argv 映射、参数清洗/落盘与三个接口）。
+- 修复启动顺序：skill/tool/HTTP 路由改为经 `ctx.inject` 等服务就绪后注册；否则全新启动时 Host 半会静默不注册（面板接口 404、`sjs` 工具缺失）。
+- 插件显示信息：`dsh/locale/{en,zh}.json` 与 `dsh/icon.svg`；离线校验 `dsh/plugin.test.mjs`（`node --test`，18 项覆盖 skill 构建、argv 映射、参数清洗/落盘、三个接口与启动顺序）。
 - `check_skill_integrity.py` 排除 `dsh/`、`node_modules/` 与根 `package.json`，插件打包文件不计入 skill 文本基线；基线随本次维护更新。
 - 文档补充 DSH 安装方式、参数面板与差异说明（勿与 `~/.dsh/skills` 混装、允许模型按需加载、`SJS_*` 环境变量优先级）；CI 增加 Node 语法与插件测试。
 

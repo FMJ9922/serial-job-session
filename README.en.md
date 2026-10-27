@@ -29,6 +29,8 @@ Pick one installation (do not mix them):
 
 After installation the Plugins page lists **Serial Job Session**, new sessions advertise `serial-job-session`, the `sjs` tool is available, and Settings gains a **Serial Jobs** page for the plugin's parameters (below). Python 3.11+ is required; set `SJS_PYTHON` when `python` is not on `PATH`, and `SJS_TIMEOUT_MS` to change the per-call timeout (default 120000 ms).
 
+Version note: `package.json`'s `version` is the **plugin version** (currently `5.1.0`, shipped as git tag `v5.1.0`); the repository's `VERSION` file is the **skill protocol version** (`5.0.0`, the only input to an instance's template identity). They move independently: upgrading the plugin never reports `TEMPLATE_CHANGED` for existing instances; a protocol change requires the rebind described in INSTALL.
+
 ### Parameter panel (Web UI)
 
 Settings → **Serial Jobs** (`settings.section`) edits the plugin's own runtime parameters. A save applies to the next `sjs` call without restarting the Harness:
