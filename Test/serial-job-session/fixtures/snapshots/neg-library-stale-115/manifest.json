@@ -1,0 +1,8 @@
+{
+  "schema": "serial-job-session-fixture/v1",
+  "id": "neg-library-stale-115",
+  "command": "py -3 diagnose_replay.py fixtures/snapshots/neg-library-stale-115",
+  "expected_codes": [
+    "LIBRARY_STALE_REVISION"
+  ]
+}

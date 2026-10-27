@@ -1,0 +1,20 @@
+{
+  "schema": "serial-job-session-light-workflow/v1",
+  "parent_job_id": "{{job-id}}",
+  "revision": 1,
+  "max_depth": 1,
+  "max_nodes": 4,
+  "execution_root": "output/{{job-id}}/runtime",
+  "nodes": [
+    {
+      "id": "research-a",
+      "role": "research",
+      "readonly": true,
+      "required": true,
+      "status": "pending",
+      "close_requested": false,
+      "nested_agents": [],
+      "writes": []
+    }
+  ]
+}

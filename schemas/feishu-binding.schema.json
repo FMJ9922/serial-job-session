@@ -1,0 +1,19 @@
+{
+  "$id": "serial-job-session-feishu-binding/v1",
+  "type": "object",
+  "required": ["schema", "enabled"],
+  "properties": {
+    "schema": {"const": "serial-job-session-feishu-binding/v1"},
+    "enabled": {"type": "boolean"},
+    "wiki_url": {"type": "string"},
+    "wiki_node": {"type": "string"},
+    "table_id": {"type": "string"},
+    "view_id": {"type": "string"},
+    "base_token": {"type": "string"},
+    "title": {"type": "string"},
+    "field_map": {
+      "type": "object",
+      "additionalProperties": {"type": "string"}
+    }
+  }
+}

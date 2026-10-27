@@ -1,0 +1,68 @@
+{
+  "$id": "serial-job-session-managed-run/v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "run_id",
+    "route_key",
+    "allowlist",
+    "max_jobs",
+    "deadline",
+    "max_retries",
+    "max_parallel",
+    "agent_budget",
+    "isolate_writes",
+    "human_only_policy",
+    "human_accept_policy",
+    "irreversible_policy",
+    "reviewer_policy",
+    "risk_ceiling",
+    "stop_on"
+  ],
+  "properties": {
+    "schema": {"const": "serial-job-session-managed-run/v1"},
+    "run_id": {"type": "string", "minLength": 1},
+    "route_key": {"type": "string", "minLength": 1},
+    "preset": {"enum": ["managed", "overnight"]},
+    "max_jobs": {"type": "integer", "minimum": 1},
+    "deadline": {"type": ["string", "null"]},
+    "max_retries": {"type": "integer", "minimum": 0},
+    "max_parallel": {"type": "integer", "minimum": 1},
+    "agent_budget": {"type": "integer", "minimum": 0},
+    "isolate_writes": {"type": "boolean"},
+    "count_human_wait_offhours": {"type": "boolean"},
+    "high_risk_confirmed": {"type": "boolean"},
+    "drain": {"type": "boolean"},
+    "completed_count": {"type": "integer"},
+    "agent_tokens_used": {"type": "integer"},
+    "consecutive_fail_count": {"type": "integer"},
+    "sample_n": {"type": "integer"},
+    "history_pass_rate": {"type": ["number", "null"]},
+    "risk_ceiling": {"enum": ["low", "medium", "high"]},
+    "human_only_policy": {"enum": ["stop", "skip"]},
+    "human_accept_policy": {"enum": ["stop", "queue_for_human"]},
+    "irreversible_policy": {"enum": ["stop", "require_confirm"]},
+    "reviewer_policy": {
+      "type": "object",
+      "required": ["low", "medium", "high"],
+      "properties": {
+        "low": {"enum": ["skip", "required"]},
+        "medium": {"enum": ["required"]},
+        "high": {"enum": ["required"]}
+      }
+    },
+    "allowlist": {
+      "type": "object",
+      "required": ["shapes", "phases", "faces", "paths", "tools"],
+      "properties": {
+        "shapes": {"type": "array"},
+        "phases": {"type": "array"},
+        "faces": {"type": "array"},
+        "paths": {"type": "array"},
+        "tools": {"type": "array"},
+        "filters": {"type": "array"}
+      }
+    },
+    "stop_on": {"type": "array", "items": {"type": "string"}}
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "schema": "serial-job-session-fixture/v1",
+  "id": "neg-rejected-in-main",
+  "command": "py -3 diagnose_replay.py fixtures/snapshots/neg-rejected-in-main",
+  "expected_codes": [
+    "REJECTED_IN_SUCCESS_SAMPLE"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schema": "serial-job-session-managed-run/v1",
+  "run_id": "{{run-id}}",
+  "route_key": "{{route_key}}",
+  "preset": "managed",
+  "max_jobs": 3,
+  "deadline": null,
+  "max_retries": 2,
+  "max_parallel": 1,
+  "agent_budget": 0,
+  "isolate_writes": true,
+  "count_human_wait_offhours": false,
+  "high_risk_confirmed": false,
+  "drain": false,
+  "risk_ceiling": "medium",
+  "human_only_policy": "stop",
+  "human_accept_policy": "stop",
+  "irreversible_policy": "require_confirm",
+  "reviewer_policy": {
+    "low": "skip",
+    "medium": "required",
+    "high": "required"
+  },
+  "allowlist": {
+    "shapes": [],
+    "phases": [],
+    "faces": [],
+    "paths": [],
+    "tools": [],
+    "filters": []
+  },
+  "stop_on": [
+    "dependency_ambiguous",
+    "split_required",
+    "human_only",
+    "probe_failed",
+    "over_grant",
+    "lease_conflict",
+    "budget_exhausted",
+    "consecutive_failures"
+  ]
+}

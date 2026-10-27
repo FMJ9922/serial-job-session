@@ -1,0 +1,10 @@
+{
+  "schema": "serial-job-session-fixture/v1",
+  "id": "live-min",
+  "command": "py -3 diagnose_replay.py fixtures/snapshots/live-min",
+  "expected_codes": [
+    "COMPAT_MULTI_ATTEMPT",
+    "COMPAT_UNTRACKED",
+    "COMPAT_SPECIAL_REOPEN"
+  ]
+}

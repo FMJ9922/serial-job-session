@@ -1,0 +1,3 @@
+# 证据目录不进 Cursor 索引 / @folder 上下文。
+# 不要改成 .cursorignore：Agent 仍需按路径 Read output/{job-id}/RESULT.json。
+output/

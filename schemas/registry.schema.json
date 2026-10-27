@@ -1,0 +1,28 @@
+{
+  "$id": "serial-job-session-registry/v1",
+  "type": "object",
+  "required": ["schema", "instances"],
+  "properties": {
+    "schema": {"const": "serial-job-session-registry/v1"},
+    "updated_at": {"type": ["string", "null"]},
+    "instances": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["route_key", "instance_id", "domain_name", "instance_root"],
+        "properties": {
+          "route_key": {"type": "string", "minLength": 1},
+          "aliases": {"type": "array", "items": {"type": "string"}},
+          "instance_id": {"type": "string"},
+          "domain_name": {"type": "string"},
+          "instance_root": {"type": "string"},
+          "protocol_entry": {"type": "string"},
+          "intent_entry": {"type": "string"},
+          "required_reads": {"type": "array", "items": {"type": "string"}},
+          "enabled": {"type": "boolean"},
+          "protocol_version": {"type": "string"}
+        }
+      }
+    }
+  }
+}

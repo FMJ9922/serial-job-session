@@ -1,0 +1,21 @@
+{
+  "$id": "serial-job-session-estimate-library/v2",
+  "type": "object",
+  "required": ["schema", "instance_id", "job_id", "event"],
+  "properties": {
+    "schema": {"enum": ["serial-job-session-estimate-library/v1", "serial-job-session-estimate-library/v2"]},
+    "event": {"enum": ["closed", "acceptance_revoked", "correction"]},
+    "instance_id": {"type": "string"},
+    "job_id": {"type": "string"},
+    "closure_revision": {"type": "integer"},
+    "status": {"type": "string"},
+    "closed_at": {"type": ["string", "null"]},
+    "accepted_at": {"type": ["string", "null"]},
+    "ai_first_pass": {"type": ["number", "null"]},
+    "ai_rework": {"type": ["number", "null"]},
+    "ai_net": {"type": ["number", "null"]},
+    "business_wait": {"type": ["number", "null"]},
+    "delivery_workhours": {"type": ["number", "null"]},
+    "elapsed": {"type": ["number", "null"]}
+  }
+}

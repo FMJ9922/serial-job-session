@@ -1,0 +1,10 @@
+{"schema": "serial-job-session-estimate-library/v1", "instance_id": "8f3c1a2e-4b6d-4e91-9c70-a1b2c3d4e5f6", "job_id": "2026-09-02_v2-interp-migrate-authored", "status": "rejected", "ai_net": 0.18, "estimate": 1.0}
+{"schema": "serial-job-session-estimate-library/v2", "instance_id": "8f3c1a2e-4b6d-4e91-9c70-a1b2c3d4e5f6", "job_id": "2026-09-02_v2-interp-migrate-authored", "status": "accepted", "ai_net": 0.6, "estimate": 1.0, "event": "closed", "closure_revision": 1}
+{"schema": "serial-job-session-estimate-library/v2", "job_id": "2026-09-03_v2-reject-118-isolate", "status": "accepted", "closure_revision": 1}
+{"schema": "serial-job-session-estimate-library/v2", "job_id": "2026-09-03_v2-preview-e2e-gate", "status": "accepted", "closure_revision": 1}
+{"schema": "serial-job-session-estimate-library/v2", "job_id": "2026-09-03_v2-restore-117-baseline", "status": "accepted", "closure_revision": 1}
+{"schema": "serial-job-session-estimate-library/v2", "job_id": "2026-09-03_v2-hda-hip-git-ingest", "status": "accepted", "closure_revision": 1}
+{"schema": "serial-job-session-estimate-library/v2", "job_id": "2026-09-03_v2-curve-input-channel", "status": "accepted", "closure_revision": 1}
+{"schema": "serial-job-session-estimate-library/v2", "job_id": "2026-09-03_v2-tile-pack-focus-heu", "status": "accepted", "closure_revision": 1}
+{"schema": "serial-job-session-estimate-library/v2", "job_id": "2026-09-03_v2-unity-thin-bridge", "status": "accepted", "closure_revision": 1}
+{"schema": "serial-job-session-estimate-library/v2", "job_id": "2026-09-03_v2-preview-depth-cleanup", "status": "accepted", "closure_revision": 1}

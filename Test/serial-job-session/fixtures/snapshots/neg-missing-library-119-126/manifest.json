@@ -1,0 +1,8 @@
+{
+  "schema": "serial-job-session-fixture/v1",
+  "id": "neg-missing-library-119-126",
+  "command": "py -3 diagnose_replay.py fixtures/snapshots/neg-missing-library-119-126",
+  "expected_codes": [
+    "POST_CLOSE_INCOMPLETE"
+  ]
+}

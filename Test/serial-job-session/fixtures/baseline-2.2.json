@@ -1,0 +1,60 @@
+{
+  "schema": "serial-job-session-fixture/v1",
+  "captured_at": "2026-09-03T16:10:00+08:00",
+  "protocol_version": "2.2.0",
+  "unit_tests": {"n": 46, "ok": true, "entry": "serial-job-session/scripts/test_serial_job_session.py"},
+  "replay_tests": {"n": 3, "ok": true, "entry": "Test/serial-job-session/test_replay_fixtures.py"},
+  "instance_id": "8f3c1a2e-4b6d-4e91-9c70-a1b2c3d4e5f6",
+  "live_probe": {
+    "job70_depends_on": [52, 53, 100, 112, 114, 116, 117, 126],
+    "library_115_latest": "accepted/0.60h v2",
+    "library_115_v1_row_retained": true,
+    "library_119_126": "present",
+    "plan_rollup_generated_at": "2026-09-03T15:47:35+08:00",
+    "example_validate_ok": true,
+    "example_closed_cards_scanned": 111,
+    "skill_unit_tests": 46,
+    "blocking_live_failures": []
+  },
+  "known_defects": [
+    {
+      "id": "stale_dependency_70",
+      "job_id": "2026-08-28_human-region-farm-forest-mountain",
+      "diagnosis": "STALE_DEPENDENCY",
+      "detail": "历史：卡 YAML depends_on 含 118；菜单 70 已改挂 126。2026-09-03 活现场卡已含 126。",
+      "snapshot": "neg-stale-dep-70"
+    },
+    {
+      "id": "rejected_in_main_stats_118",
+      "job_id": "2026-09-03_v2-render-live-ground-preview",
+      "diagnosis": "REJECTED_IN_SUCCESS_SAMPLE",
+      "detail": "rejected + superseded 不得进入成功交付主分布",
+      "snapshot": "neg-rejected-in-main"
+    },
+    {
+      "id": "library_stale_115",
+      "job_id": "2026-09-02_v2-interp-migrate-authored",
+      "diagnosis": "LIBRARY_STALE_REVISION",
+      "detail": "仅 v1 行时 rejected/0.18h vs 卡 accepted/0.60h。活现场另有 v2 行，latest 已对齐。",
+      "snapshot": "neg-library-stale-115"
+    },
+    {
+      "id": "stale_plan_rollup",
+      "diagnosis": "PLAN_ROLLUP_STALE",
+      "detail": "AUTO:PLAN-ROLLUP 生成于 2026-09-02T21:04:19，阶段表已改 A4 16–26。活现场块已是 2026-09-03T15:47:35。",
+      "snapshot": "neg-plan-rollup-stale"
+    },
+    {
+      "id": "missing_library_119_126",
+      "diagnosis": "POST_CLOSE_INCOMPLETE",
+      "detail": "119–126 已结档但库无行。活现场 v2 行已补。",
+      "snapshot": "neg-missing-library-119-126"
+    },
+    {
+      "id": "menu_table_unparsed",
+      "diagnosis": "MENU_TABLE_UNPARSED",
+      "detail": "仅 Markdown 表、无 N. **title**（依赖：）行时 post_close 正则匹配 0 条。",
+      "snapshot": "neg-menu-table-unparsed"
+    }
+  ]
+}
