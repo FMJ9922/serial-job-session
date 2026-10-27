@@ -71,6 +71,8 @@ python scripts/sjs.py context --instance <project>/.cursor/workflows/demo
 两点与纯 skill 安装的差别：
 
 1. **不要再把本仓复制/克隆到 `~/.dsh/skills` 或项目 `.dsh/skills`。** 同名时文件系统来源会遮蔽插件的注册（本机实测：先注册的文件系统副本盖住了插件注册，且它带 `disable-model-invocation: true`，结果模型侧看不到该 skill）。只保留一种安装方式。
+
+手动跑 CLI 时，`--input` 的 JSON 请用 **UTF-8 无 BOM** 保存：Windows 记事本与 PowerShell 的 `Set-Content -Encoding utf8` 会加 BOM，CLI 会报 `Unexpected UTF-8 BOM`；更省事的是用 `--input -` 从 stdin 传入（插件里的 `sjs` 工具默认就这样）。
 2. 入口只有一处：`dsh/index.js`（Host 半：skill、`sjs` 工具、参数文件与 JSON 接口）+ `dsh/client.js`（参数面板）+ `dsh/cordis.patch.yml`（插入 row）+ `dsh/locale/{en,zh}.json`、`dsh/icon.svg`（插件页信息）+ `dsh/plugin.test.mjs`（离线校验，`node --test dsh/plugin.test.mjs`）。`scripts/`、`references/`、`schemas/` 仍是唯一事实源，插件只是把它们接进 Harness。
 
 插件注册**允许模型按需加载**（`invocation.modelInvocable: true`）。这偏离 `SKILL.md` 里给文件系统来源写的 `disable-model-invocation: true`，因为 Harness 的 skill 目录就是它按需加载的入口；条目描述已写明“仅在明确点名、`route_key：意图` 或已绑定工作流时使用，不是普通任务的默认框架”。

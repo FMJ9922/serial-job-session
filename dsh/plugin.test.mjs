@@ -20,10 +20,14 @@ import {
   apply,
   buildArgs,
   buildSkillRegistration,
+  checkInstallation,
+  isSupportedPython,
   name,
   parseFrontMatter,
+  parsePythonVersion,
   readSettings,
   renderResultText,
+  REQUIRED_RUNTIME_FILES,
   sanitizeSettings,
   settingsPath,
   writeSettings,
@@ -31,6 +35,7 @@ import {
 
 const PLUGIN_DIR = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(PLUGIN_DIR, '..')
+const MANIFEST = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
 
 /**
  * Run a case with `DSH_PROFILE_DIR` pointed at a fresh directory.
@@ -134,6 +139,37 @@ function fakeResponse() {
 
 test('the bundle keeps one row name', () => {
   assert.equal(name, 'dsh-serial-job-session')
+})
+
+test('the installation ships every file the CLI reads at startup', () => {
+  const installation = checkInstallation()
+  assert.equal(installation.ok, true, `missing: ${installation.missing.join(', ')}`)
+  assert.deepEqual(installation.missing, [])
+  for (const relative of REQUIRED_RUNTIME_FILES) {
+    assert.ok(existsSync(path.join(ROOT, relative)), `missing on disk: ${relative}`)
+  }
+})
+
+test('package.json ships the integrity baseline and every runtime file', () => {
+  const listed = new Set(MANIFEST.files)
+  // `files` uses globs for trees, so the packed list itself is asserted by
+  // `node dsh/check-pack.mjs`; here we only guard the regression that dropped
+  // the baseline file from the npm tarball.
+  assert.ok(listed.has('skill-integrity.json'), 'the 5.1.1 regression: the baseline must be packed')
+  assert.ok(listed.has('dsh/index.js'))
+  assert.ok(listed.has('dsh/client.js'))
+  assert.ok(listed.has('scripts/**/*.py'), 'the CLI tree must be packed')
+})
+
+test('Python probe parses banners and rejects anything below 3.11', () => {
+  assert.deepEqual(parsePythonVersion('Python 3.11.9'), { major: 3, minor: 11, patch: 9, text: 'Python 3.11.9' })
+  assert.deepEqual(parsePythonVersion('Python 2.7.16'), { major: 2, minor: 7, patch: 16, text: 'Python 2.7.16' })
+  assert.equal(parsePythonVersion('garbage'), null)
+  assert.equal(isSupportedPython(parsePythonVersion('Python 3.11.9')), true)
+  assert.equal(isSupportedPython(parsePythonVersion('Python 3.12.1')), true)
+  assert.equal(isSupportedPython(parsePythonVersion('Python 3.10.13')), false)
+  assert.equal(isSupportedPython(parsePythonVersion('Python 2.7.16')), false)
+  assert.equal(isSupportedPython(null), false)
 })
 
 test('front matter parsing handles the folded description SKILL.md uses', () => {

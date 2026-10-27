@@ -1,6 +1,6 @@
 {
   "name": "dsh-serial-job-session",
-  "version": "5.1.1",
+  "version": "5.1.2",
   "description": "Contract-and-evidence workflow for long AI tasks: the serial-job-session v5 skill, an `sjs` tool that runs its local CLI, and a settings panel for interpreter, timeout and extra arguments.",
   "type": "module",
   "license": "MIT",
@@ -37,19 +37,21 @@
     "schemas/*.json",
     "examples/*.json",
     "SKILL.md",
+    "VERSION",
+    "skill-integrity.json",
+    "defaults.json",
+    "roles.json",
     "INSTALL.md",
     "README.md",
     "README.en.md",
     "CHANGELOG.md",
     "CREDITS.md",
-    "LICENSE",
-    "VERSION",
-    "defaults.json",
-    "roles.json"
+    "LICENSE"
   ],
   "scripts": {
     "test:plugin": "node --test dsh/plugin.test.mjs",
-    "check:plugin": "node --check dsh/index.js && node --check dsh/client.js"
+    "check:plugin": "node --check dsh/index.js && node --check dsh/client.js",
+    "smoke:pack": "node dsh/check-pack.mjs"
   },
   "dsh": {
     "bundle": {

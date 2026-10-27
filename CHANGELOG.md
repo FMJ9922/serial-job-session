@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.1.2 — 2026-10-28
+
+修复 npm 安装包缺文件导致的启动失败（5.1.0/5.1.1 的 npm 包受影响，GitHub/本地目录安装不受影响）。
+
+- `package.json` 的 `files` 补上 `skill-integrity.json`：`sjs.py` 启动时无条件读取该基线，缺文件会让 `init / context / apply / check` 全部在入口失败。
+- 新增 `npm run smoke:pack`（`dsh/check-pack.mjs`）：发布前用 `npm pack --dry-run --json` 断言 tarball 含全部运行时文件，CI 同步执行。
+- 插件在启动/调用时检查安装完整性：缺文件时 `sjs` 工具直接报「installation is incomplete: missing …」并提示重装，设置/插件页显示同样的警告，不再等 Python 抛 traceback。
+- Python 探测改为解析 `--version` 并要求 **3.11+**：Windows 上 PATH 里排第一的 `python` 常是 2.7（`--version` 退出码为 0），以前会被误采纳，随后 `from __future__ import annotations` 直接 SyntaxError。候选顺序同时改为 `python3 / python / py`，失败信息列出每个候选被拒的原因。
+- 离线校验增至 22 项；Python 版本解析、安装完整性、`files` 覆盖均有断言。
+
 ## 5.1.1 — 2026-10-27
 
 - 插件页补全介绍：bundle 详情页与设置页的面板新增「这个插件是什么 / 解决的问题 / 适合与不适合 / 怎么用 / 注意事项」，并附完整介绍链接。

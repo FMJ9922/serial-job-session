@@ -32,7 +32,7 @@ window.__ModuleLoader__.load({
       intro:
         '这些参数作用于本机安装的 serial-job-session 插件：`sjs` 工具每次调用都会读取当前设置，保存后立即生效，不需要重启 Harness。',
       interpreter: 'Python 解释器',
-      interpreterHint: '留空表示自动探测。优先顺序：环境变量 SJS_PYTHON → 本设置 → python / python3 / py。',
+      interpreterHint: '留空表示自动探测，只接受 Python 3.11+（2.x 会被拒绝）。优先顺序：环境变量 SJS_PYTHON → 本设置 → python3 / python / py。',
       interpreterPlaceholder: '自动（依次尝试 python / python3 / py）',
       timeout: '单次调用超时（毫秒）',
       timeoutHint: '范围 1000–600000。环境变量 SJS_TIMEOUT_MS 会覆盖本设置。',
@@ -60,6 +60,9 @@ window.__ModuleLoader__.load({
       saveFailed: '保存失败',
       enabled: '允许',
       invalidTimeout: '超时必须是不小于 1000 的整数',
+      incompleteTitle: '安装不完整',
+      incompleteHint: '缺少文件：',
+      incompleteFix: '。请重新安装包含 skill-integrity.json 的版本（npm 5.1.2 或更新），或改用 GitHub / 本地目录安装。',
       aboutTitle: '这个插件是什么',
       positioning: '把 AI 的长任务变成「有合同、有版本、有证据」的串行作业流：断会话不丢进度，验收不靠印象。',
       problemsTitle: '解决的问题',
@@ -89,7 +92,7 @@ window.__ModuleLoader__.load({
       intro:
         'These parameters belong to the serial-job-session plugin installed here. The `sjs` tool reads them on every call, so a save applies immediately without restarting the Harness.',
       interpreter: 'Python interpreter',
-      interpreterHint: 'Empty means auto-detect. Precedence: SJS_PYTHON → this setting → python / python3 / py.',
+      interpreterHint: 'Empty means auto-detect; only Python 3.11+ is accepted (2.x is rejected). Precedence: SJS_PYTHON → this setting → python3 / python / py.',
       interpreterPlaceholder: 'auto (python / python3 / py)',
       timeout: 'Call timeout (ms)',
       timeoutHint: '1000–600000. The SJS_TIMEOUT_MS environment variable overrides this setting.',
@@ -117,6 +120,9 @@ window.__ModuleLoader__.load({
       saveFailed: 'Save failed',
       enabled: 'allowed',
       invalidTimeout: 'Timeout must be an integer of at least 1000',
+      incompleteTitle: 'Installation incomplete',
+      incompleteHint: 'Missing files: ',
+      incompleteFix: '. Reinstall a release that ships skill-integrity.json (npm 5.1.2 or newer), or use the GitHub / local-directory install.',
       aboutTitle: 'What this plugin is',
       positioning:
         'Turns a long AI task into a serial workflow with a contract, versions and evidence: a dropped session never loses progress, and acceptance rests on evidence, not impressions.',
@@ -390,6 +396,15 @@ window.__ModuleLoader__.load({
       }
 
       const settings = state?.settings ?? {}
+      const installation = state?.installation
+      const installationWarning =
+        installation && installation.ok === false
+          ? h(
+              'p',
+              { className: 'sjs-status sjs-status-error' },
+              `${t('incompleteTitle')}：${t('incompleteHint')}${(installation.missing ?? []).join('、')}${t('incompleteFix')}`,
+            )
+          : null
       const metaRows = [
         [t('repo'), state?.repoRoot],
         [t('cli'), state?.cliPath],
@@ -405,6 +420,7 @@ window.__ModuleLoader__.load({
         style,
         heading,
         intro,
+        installationWarning,
         about,
         h(
           'section',

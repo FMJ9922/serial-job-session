@@ -59,6 +59,8 @@ Creation-time choices (decision mode, thresholds, failure handling, estimates/Fe
 Two differences from a plain skill install:
 
 1. **Do not also copy or clone this repository into `~/.dsh/skills` or a project `.dsh/skills`.** A same-named filesystem entry shadows the bundle registration — measured here: the filesystem copy registered first, won the name, and shipped `disable-model-invocation: true`, so the model catalog never saw the skill. Keep exactly one installation.
+
+When running the CLI by hand, save an `--input` JSON as **UTF-8 without BOM**: Windows Notepad and PowerShell's `Set-Content -Encoding utf8` add a BOM, and the CLI then reports `Unexpected UTF-8 BOM`. The simplest route is `--input -` over stdin, which the plugin's `sjs` tool already uses.
 2. The bundle is glue only: `dsh/index.js` (Host half: skill, `sjs` tool, settings file and JSON API), `dsh/client.js` (parameter panel), `dsh/cordis.patch.yml` (inserted row), `dsh/locale/{en,zh}.json` and `dsh/icon.svg` (Plugins page), and `dsh/plugin.test.mjs` (offline checks via `node --test dsh/plugin.test.mjs`). `scripts/`, `references/` and `schemas/` stay the single source of truth.
 
 The registration permits on-demand model loading (`invocation.modelInvocable: true`). That intentionally relaxes the `disable-model-invocation: true` written for filesystem hosts, because the Harness catalog *is* its on-demand loading path, and the entry description already restricts use to an explicit name, a `route_key：意图` phrase, or an already-bound workflow.

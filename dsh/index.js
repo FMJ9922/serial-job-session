@@ -22,7 +22,7 @@
  * @module dsh-serial-job-session
  */
 
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { homedir } from 'node:os'
 import path from 'node:path'
@@ -39,6 +39,31 @@ const SKILL_PATH = path.join(SKILL_ROOT, 'SKILL.md')
 const CLI_PATH = path.join(SKILL_ROOT, 'scripts', 'sjs.py')
 const VERSION_PATH = path.join(SKILL_ROOT, 'VERSION')
 const DEFAULTS_PATH = path.join(SKILL_ROOT, 'defaults.json')
+
+/**
+ * Files the CLI needs at runtime, relative to the skill root. `sjs.py` reads the
+ * integrity baseline on startup, so a package that ships the CLI without it
+ * fails every subcommand; the check below turns that into one clear node-side
+ * message instead of a Python traceback in the middle of a workflow.
+ */
+export const REQUIRED_RUNTIME_FILES = [
+  'SKILL.md',
+  'VERSION',
+  'defaults.json',
+  'skill-integrity.json',
+  'scripts/sjs.py',
+]
+
+/**
+ * Report missing runtime files for an installed skill root.
+ *
+ * @param {string} [root] skill root; defaults to this package's checkout.
+ * @returns {{ ok: boolean, root: string, missing: string[] }} installation state.
+ */
+export function checkInstallation(root = SKILL_ROOT) {
+  const missing = REQUIRED_RUNTIME_FILES.filter((relative) => !existsSync(path.join(root, relative)))
+  return { ok: missing.length === 0, root, missing }
+}
 
 /** Provider name reported in the skill catalog. */
 const PROVIDER = name
@@ -65,7 +90,9 @@ const MAX_OUTPUT_CHARS = 30_000
 /** Upper bound on a panel request body. */
 const MAX_REQUEST_BYTES = 64 * 1024
 /** Candidate interpreters, in order, when neither settings nor `SJS_PYTHON` name one. */
-const DEFAULT_PYTHON = ['python', 'python3', 'py']
+const DEFAULT_PYTHON = ['python3', 'python', 'py']
+/** Minimum Python the CLI supports. */
+const MIN_PYTHON = { major: 3, minor: 11 }
 /** Settings file name inside the profile directory. */
 const SETTINGS_FILE = 'serial-job-session.json'
 /** JSON API prefix served to the Client panel. */
@@ -390,30 +417,70 @@ function pythonCandidates(settings) {
 }
 
 /**
- * Pick a working interpreter by trying candidates until one answers.
+ * Parse a `python --version` banner.
+ *
+ * @param {unknown} text stdout or stderr of the probe.
+ * @returns {{ major: number, minor: number, patch: number, text: string } | null} parsed version.
+ */
+export function parsePythonVersion(text) {
+  const match = /Python\s+(\d+)\.(\d+)(?:\.(\d+))?/i.exec(String(text ?? ''))
+  if (!match) return null
+  const major = Number(match[1])
+  const minor = Number(match[2])
+  const patch = Number(match[3] ?? 0)
+  return { major, minor, patch, text: `Python ${major}.${minor}${match[3] ? `.${patch}` : ''}` }
+}
+
+/**
+ * Decide whether a parsed version satisfies the CLI's Python 3.11+ floor.
+ *
+ * @param {{ major: number, minor: number } | null} version parsed version.
+ * @returns {boolean} whether the CLI can run on it.
+ */
+export function isSupportedPython(version) {
+  if (!version) return false
+  if (version.major !== MIN_PYTHON.major) return false
+  return version.minor >= MIN_PYTHON.minor
+}
+
+/**
+ * Pick a working interpreter by trying candidates until one answers with a
+ * supported version.
+ *
+ * Requiring `Python 3.11+` matters on Windows: a `python` on PATH is often
+ * Python 2.7, whose `--version` exits 0 and used to be accepted, after which the
+ * CLI died on its first `from __future__ import annotations`.
  *
  * @param {string[]} candidates executable candidates.
  * @param {AbortSignal | undefined} signal cancellation.
  * @param {number} timeoutMs probe bound.
- * @returns {Promise<{ executable: string, version: string }>} the interpreter and its version line.
+ * @returns {Promise<{ executable: string, version: string }>} the interpreter and its version.
  */
 async function resolveInterpreter(candidates, signal, timeoutMs) {
   const probeTimeout = Math.min(timeoutMs, 30_000)
-  let lastError = 'no python interpreter found'
+  const rejected = []
   for (const candidate of candidates) {
     const probe = await runProcess(
       candidate,
       ['--version'],
       { cwd: SKILL_ROOT, stdin: undefined, signal, timeoutMs: probeTimeout },
     )
-    if (!probe.spawnError && probe.code === 0) {
-      return { executable: candidate, version: (probe.stdout || probe.stderr).trim() }
+    if (probe.spawnError) {
+      rejected.push(`${candidate}: ${probe.spawnError}`)
+      continue
     }
-    lastError = probe.spawnError || (probe.stderr || probe.stdout).trim() || `exit ${probe.code}`
+    const banner = `${probe.stdout}\n${probe.stderr}`.trim()
+    const version = parsePythonVersion(banner)
+    if (!isSupportedPython(version)) {
+      rejected.push(`${candidate}: ${version ? version.text : banner || `exit ${probe.code}`} (needs Python 3.11+)`)
+      continue
+    }
+    return { executable: candidate, version: version.text }
   }
   throw new Error(
-    `cannot start a Python 3.11+ interpreter for serial-job-session (${lastError}); ` +
-      'install python or set the interpreter in Settings → 串行任务参数',
+    'cannot start a Python 3.11+ interpreter for serial-job-session: ' +
+      (rejected.length > 0 ? rejected.join('; ') : 'no candidate found') +
+      '. Install Python 3.11+ or set the interpreter in Settings → 串行任务参数.',
   )
 }
 
@@ -538,6 +605,7 @@ function panelState(settings) {
     settingsPath: settingsPath(),
     settings,
     defaults: readWorkflowDefaults(),
+    installation: checkInstallation(),
     candidates: DEFAULT_PYTHON,
     env: {
       SJS_PYTHON: process.env.SJS_PYTHON ?? null,
@@ -745,6 +813,14 @@ function buildTool(ctx) {
     async execute(args, exec) {
       if (!COMMANDS.includes(args.command)) {
         throw new Error(`unsupported sjs command: ${String(args.command)}`)
+      }
+      const installation = checkInstallation()
+      if (!installation.ok) {
+        throw new Error(
+          `serial-job-session installation is incomplete: missing ${installation.missing.join(', ')} under ${installation.root}. ` +
+            'The npm package must ship skill-integrity.json; reinstall a release that includes it ' +
+            '(or use the GitHub/local-directory install).',
+        )
       }
       const settings = readSettings()
       const hasInput = args.input !== undefined && args.input !== null
