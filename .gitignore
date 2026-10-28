@@ -18,6 +18,11 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Local-only maintainer notes (may name credential paths on this machine)
+dsh/RELEASING.md
+dsh/RELEASING.local.md
+dsh/*.local.md
+
 # Archives
 *.7z
 *.zip
