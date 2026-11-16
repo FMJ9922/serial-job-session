@@ -9,6 +9,8 @@ python scripts/check_skill_integrity.py --update --maintenance-ack MODIFY_SKILL
 python scripts/check_skill_integrity.py
 ```
 
+方法文件修改后，先用 `python -m unittest discover -s scripts -p "test_sjs_v5.py"` 跑允许旧基线的定向测试；审阅 diff 后再重建基线，最后跑全量。`--update` 是维护动作，不是验收检查本身。
+
 完整性更新仅限明确维护本 skill 的工作，不能作为运行时绕过检查的方法。验证已安装技能还可使用宿主的技能 frontmatter 验证器。
 
 测试关注可观察行为：提交前验证、幂等和版本冲突、写入中断、分片重放、三种决策策略、真实必验项、独立 reviewer、嵌套资源边界、可选模块隔离和上下文读取成本。远程服务使用模拟传输；不在 CI 创建真实飞书资源。
@@ -29,4 +31,4 @@ node dsh/smoke-stdin.mjs
 python scripts/check_skill_integrity.py
 ```
 
-插件版本看根 `package.json` 的 `version`，skill 协议版本看 `VERSION`；日常插件补丁不动 `VERSION`。npm 发布后需等待约 30 秒再确认 registry（传播延迟，不是需要人工批准）；GitHub Release 的 tag 要先推送。本机的凭据路径与逐条操作细节不写入仓库。
+插件版本看根 `package.json` 的 `version`，skill 协议版本看 `VERSION`；从 5.2.0 起两者同步升号。`method` 身份只看方法文件，纯 `dsh/` 发布不改方法基线。npm 发布后需等待约 30 秒再确认 registry（传播延迟，不是需要人工批准）；GitHub Release 的 tag 要先推送。本机的凭据路径与逐条操作细节不写入仓库。

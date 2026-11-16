@@ -33,6 +33,7 @@ const REQUIRED = [
   'scripts/sjs_context.py',
   'schemas/run.schema.json',
   'references/runtime.md',
+  'references/reporting.md',
   'dsh/index.js',
   'dsh/client.js',
   'dsh/cordis.patch.yml',

@@ -1,6 +1,6 @@
 # Serial Job Session (serial-job-session for DSH)
 
-> Plugin version `5.1.1`; skill protocol version `5.0.0` (`VERSION`). They move independently — upgrading the plugin never reports `TEMPLATE_CHANGED` for existing instances.
+> Plugin and skill protocol share one version, `5.2.0` (`VERSION` and `package.json`). Template identity rests on `method` (shared-method files), so a version bump alone no longer reports `TEMPLATE_CHANGED` for existing instances.
 >
 > 中文：[INTRO.md](INTRO.md)
 
@@ -11,6 +11,7 @@
 | Common trouble | What this workflow does |
 |---|---|
 | Progress dies with the session or the day | Progress lives in instance files (append-only logs), not in chat memory |
+| The agent works silently and you cannot tell what it is doing | Confirm the North Star and full environment before creation; proactive updates at key checkpoints, and failures or blocking states are never silent |
 | “Done” with no evidence, review by impression | Every task card carries a contract, mandatory checks and evidence paths; an independent reviewer judges each item |
 | Runaway, drifting rework | At most three rework rounds after the first implementation; exhausted work is preserved and never blocks independent tasks |
 | Agents “authorizing” themselves | Three decision modes (manual / conditional / full AI); the authorization boundary lives in the contract and no agent can impersonate human approval |
@@ -42,8 +43,8 @@
 ## Using it in DSH
 
 1. **Install** (one of the two, never both): `dsh plugin add github:FMJ9922/serial-job-session`, or a local directory with `dsh plugin add <repo path>`.
-2. **Create an instance**: have the agent run `sjs init --dry-run` to confirm the goal, authorized paths, decision mode and failure handling (the mode has no default).
-3. **Work day to day**: say `route_key：意图` (for example `界面优化：推进`), or have the agent call `sjs context` to read the current card.
+2. **Create an instance**: have the agent run `sjs init --dry-run` to confirm the goal, authorized paths, decision mode and failure handling (the mode has no default). The agent first sends a creation brief and waits for your confirmation; only then does it write the instance.
+3. **Work day to day**: say `route_key：意图` (for example `界面优化：推进`), or have the agent call `sjs context` to read the current card. Task creation, starts, dispatch, acceptance/failure and close-out each get a short update; non-terminal updates are also written to `progress`, so a dropped session can resume.
 4. **Close out**: implement → self-check → independent reviewer acceptance → close, recording the evidence-backed lessons.
 5. **Tune it**: Settings → Serial Jobs, or the same page on the plugin's bundle page; interpreter, timeout and extra CLI arguments apply on the next `sjs` call.
 6. **Where the data lives**: instances stay inside the project (gitignore them); plugin parameters live in `$DSH_HOME/serial-job-session.json`.

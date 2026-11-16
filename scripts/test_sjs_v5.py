@@ -139,6 +139,104 @@ class InitializationTests(WorkflowCase):
         self.error("RUN_CONFIG_CHANGED", self.state)
 
 
+class TemplateIdentityTests(unittest.TestCase):
+    def test_method_identity_ignores_version_but_integrity_covers_it(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "VERSION").write_text("5.2.0", encoding="utf-8")
+            manifest = {"schema": "serial-job-session-integrity/v1", "protocol_version": "5.2.0",
+                        "files": {"SKILL.md": "skill-hash", "VERSION": "version-hash-1"}}
+            (root / "skill-integrity.json").write_text(json.dumps(manifest), encoding="utf-8")
+            with mock.patch.object(config, "ROOT", root):
+                first = config.template_identity()
+                (root / "VERSION").write_text("5.2.1", encoding="utf-8")
+                manifest["protocol_version"] = "5.2.1"
+                manifest["files"]["VERSION"] = "version-hash-2"
+                (root / "skill-integrity.json").write_text(json.dumps(manifest), encoding="utf-8")
+                second = config.template_identity()
+        self.assertEqual(first["version"], "5.2.0")
+        self.assertEqual(second["version"], "5.2.1")
+        self.assertEqual(first["method"], second["method"])
+        self.assertNotEqual(first["integrity"], second["integrity"])
+        self.assertTrue(config.same_template(first, second))
+
+    def test_version_only_rebuild_keeps_method_identity(self):
+        import check_skill_integrity
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            version = root / "VERSION"
+            skill = root / "SKILL.md"
+            version.write_text("5.2.0", encoding="utf-8")
+            skill.write_text("# skill\n", encoding="utf-8")
+            manifest_path = root / "skill-integrity.json"
+            with mock.patch.multiple(check_skill_integrity, SKILL_ROOT=root,
+                                     MANIFEST_PATH=manifest_path, VERSION_PATH=version):
+                check_skill_integrity.update_manifest()
+                with mock.patch.object(config, "ROOT", root):
+                    first = config.template_identity()
+                version.write_text("5.2.1", encoding="utf-8")
+                check_skill_integrity.update_manifest()
+                with mock.patch.object(config, "ROOT", root):
+                    second = config.template_identity()
+        self.assertEqual(first["method"], second["method"])
+        self.assertNotEqual(first["integrity"], second["integrity"])
+        self.assertTrue(config.same_template(first, second))
+
+    def test_installation_integrity_still_covers_version(self):
+        import check_skill_integrity
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            version = root / "VERSION"
+            skill = root / "SKILL.md"
+            version.write_text("5.2.0", encoding="utf-8")
+            skill.write_text("# skill\n", encoding="utf-8")
+            manifest_path = root / "skill-integrity.json"
+            manifest = {"schema": "serial-job-session-integrity/v1", "protocol_version": "5.2.0",
+                        "files": {"SKILL.md": check_skill_integrity.sha256(skill),
+                                  "VERSION": check_skill_integrity.sha256(version)}}
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with mock.patch.multiple(check_skill_integrity, SKILL_ROOT=root,
+                                     MANIFEST_PATH=manifest_path, VERSION_PATH=version):
+                self.assertTrue(check_skill_integrity.check_manifest()["ok"])
+                version.write_text("5.2.1", encoding="utf-8")
+                result = check_skill_integrity.check_manifest()
+        self.assertFalse(result["ok"])
+        self.assertIn("VERSION", result["modified"])
+
+    def test_pre_5_2_identity_falls_back_to_full_integrity(self):
+        old = {"version": "5.0.0", "integrity": "full-old"}
+        new = {"version": "5.2.0", "integrity": "full-new", "method": "method-new"}
+        self.assertFalse(config.same_template(old, new))
+        self.assertTrue(config.same_template(old, dict(old)))
+
+
+class TemplateRebindTests(WorkflowCase):
+    def test_version_only_change_does_not_require_rebind(self):
+        self.init()
+        stored = self.state()["config"]["template"]
+        version_only = {**stored, "version": "9.9.9", "integrity": "full-new"}
+        with mock.patch.object(store, "template_identity", return_value=version_only):
+            self.assertEqual(self.state()["revision"], 1)
+            self.apply(create("b"))
+            checked = store.check_instance(self.root)
+        self.assertNotIn("TEMPLATE_CHANGED", checked["errors"])
+
+    def test_method_change_requires_rebind(self):
+        self.init()
+        stored = self.state()["config"]["template"]
+        changed = {**stored, "version": "9.9.9", "integrity": "full-new", "method": "method-changed"}
+        with mock.patch.object(store, "template_identity", return_value=changed):
+            self.error("TEMPLATE_CHANGED", self.state)
+            state = store.load_snapshot(self.root, verify_template=False)
+            command = {"command_id": "rebind", "expected_revision": state["revision"],
+                       "actor": {"id": "user", "kind": "human"},
+                       "operations": [{"op": "rebind_template", "template": changed,
+                                       "reason": "reviewed new shared methods"}]}
+            store.apply_command(self.root, command)
+            self.assertEqual(self.state()["config"]["template"], changed)
+            self.assertEqual(store.rebuild(self.root, persist=False), self.state())
+
+
 class PersistenceTests(WorkflowCase):
     def test_unrecorded_method_changes_block_writes(self):
         self.init()
@@ -477,9 +575,45 @@ class NestingAndContextTests(WorkflowCase):
         self.assertIn("Observed behavior matches requirement", config.canonical(payload))
         self.assertTrue(any("OVER_BUDGET" in s for s in payload["warnings"]))
 
+    def test_progress_surfaces_in_context_and_terminal_tasks_reject_it(self):
+        self.init()
+        self.apply(create())
+        self.assess()
+        self.start()
+        self.apply({"op": "progress", "task_id": "a", "summary": "Candidate under review",
+                    "questions": ["Approve the visual direction?"], "decisions": ["Use the reference layout"],
+                    "next_steps": ["Send to reviewer"]})
+        payload = context.build_context(self.state(), task_id="a")
+        self.assertEqual(payload["task"]["progress"]["summary"], "Candidate under review")
+        self.assertEqual(payload["task"]["progress"]["questions"], ["Approve the visual direction?"])
+        self.finish()
+        self.error("TASK_NOT_ACTIVE", lambda: self.apply({"op": "progress", "task_id": "a", "summary": "late"}))
+
+    def test_default_context_without_active_task_is_menu_only(self):
+        self.init()
+        self.apply(create())
+        self.apply({"op": "progress", "task_id": "a", "summary": "ready and waiting"})
+        payload = context.build_context(self.state())
+        self.assertIsNone(payload["task_id"])
+        self.assertIsNone(payload["task"])
+        self.assertTrue(any(item["id"] == "a" and item["status"] == "ready" for item in payload["menu"]))
+        self.assertNotIn("ready and waiting", config.canonical(payload))
+        explicit = context.build_context(self.state(), task_id="a")
+        self.assertEqual(explicit["task"]["progress"]["summary"], "ready and waiting")
+
+    def test_default_context_after_failure_is_menu_only(self):
+        self.init()
+        self.apply(create())
+        self.assess()
+        self.start()
+        self.apply({"op": "fail", "task_id": "a", "reason": "required environment missing"})
+        payload = context.build_context(self.state())
+        self.assertIsNone(payload["task_id"])
+        self.assertTrue(any(item["id"] == "a" and item["status"] == "failed" for item in payload["menu"]))
+
     def test_template_change_requires_explicit_rebind(self):
         self.init()
-        identity = {"version": "5.0.1", "integrity": "changed"}
+        identity = {"version": "5.0.1", "integrity": "changed", "method": "changed-method"}
         with mock.patch.object(store, "template_identity", return_value=identity):
             self.error("TEMPLATE_CHANGED", self.state)
             state = store.load_snapshot(self.root, verify_template=False)

@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from sjs_config import (ROOT, SJSError, canonical, digest, prepare_config, require,
-                        template_identity, validate_overrides)
+                        same_template, template_identity, validate_overrides)
 from sjs_model import actor_record, empty_state, reduce_command, TERMINAL
 
 STREAMS = ("tasks", "direction")
@@ -214,7 +214,7 @@ def load_snapshot(instance, *, verify_template=True):
     state = _tail(root, state or empty_state(), full=state is None)
     require(state.get("run_hash") == digest(run), "RUN_CONFIG_CHANGED", message="Creation config is immutable; use recorded policy changes or create a new instance")
     if verify_template:
-        require(state["config"].get("template") == template_identity(), "TEMPLATE_CHANGED", expected=state["config"].get("template"), actual=template_identity())
+        require(same_template(state["config"].get("template"), template_identity()), "TEMPLATE_CHANGED", expected=state["config"].get("template"), actual=template_identity())
     return state
 
 
@@ -282,7 +282,7 @@ def _prepare(root, state, request):
     import check_skill_integrity
     integrity = check_skill_integrity.check_manifest()
     require(integrity["ok"], "TEMPLATE_INTEGRITY_FAILED", integrity=integrity)
-    changed_template = state["config"].get("template") != template_identity()
+    changed_template = not same_template(state["config"].get("template"), template_identity())
     require(not changed_template or len(operations) == 1 and operations[0].get("op") == "rebind_template", "TEMPLATE_CHANGED")
     known_tasks = set(state["tasks"])
     for op in operations:
@@ -427,7 +427,7 @@ def check_instance(instance, *, integrity=True):
     if snapshot is None or digest(snapshot) != digest(rebuilt):
         warnings.append("SNAPSHOT_REBUILD_RECOMMENDED")
     errors = []
-    if rebuilt["config"]["template"] != template_identity():
+    if not same_template(rebuilt["config"]["template"], template_identity()):
         errors.append("TEMPLATE_CHANGED")
     if integrity:
         import check_skill_integrity

@@ -41,7 +41,7 @@ python scripts/sjs.py context --instance <project>/.cursor/workflows/demo
 
 安装后可以在插件页看到「串行任务会话」，新会话的 skill 目录出现 `serial-job-session`，`sjs` 工具可用；设置页会多一个**「串行任务」**页面用来调参数（见下）。依赖 Python 3.11+；`python` 不在 PATH 时用环境变量 `SJS_PYTHON` 指定解释器，`SJS_TIMEOUT_MS` 调整单次调用超时（默认 120000 ms）。
 
-版本说明：`package.json` 里的 `version` 是**插件版本**（当前 `5.1.1`，对应的 git tag 是 `v5.1.0`；5.1.1 是文案补全，未打新 tag）；仓库根的 `VERSION` 是 **skill 协议版本**（`5.0.0`，实例的模板身份只看它）。两者独立演进：升级插件不会让已有实例报 `TEMPLATE_CHANGED`，改 skill 协议才需要按 INSTALL 的说明重绑定模板。
+版本说明：从 5.2.0 起，`VERSION`（skill 协议）与 `package.json` 的 `version`（插件）统一为同一号。模板身份分两层：`integrity` 校验完整安装文件（含 `VERSION`），`method` 只跟踪方法文件；单纯升版本号不会让旧实例报 `TEMPLATE_CHANGED`，方法文件变化才需要按 INSTALL 的说明重绑定模板。
 
 ### 这个插件解决什么
 
@@ -50,7 +50,12 @@ python scripts/sjs.py context --instance <project>/.cursor/workflows/demo
 - **断会话不丢进度**：进度写进实例文件（追加式 JSONL），`context` 一屏恢复当前卡、授权与菜单。
 - **验收有据**：任务卡带合同、必验项与证据路径，独立 reviewer 逐项判定；失败或未知的必验项不会被评分洗白。
 - **授权不越界**：人工主导 / 条件自治 / 全 AI 三种模式，批准带来源，agent 不能冒充人类；模式没有默认值。
+- **关键节点主动汇报**：创建前确认北极星与全部环境；建任务、开工、派工、验收/失败/收口各一条人话简报，非终态汇报同时写入 `progress`，断会话也能接上。
 - **成本可控**：默认 12000 字符上下文预算，日志按 20 张卡 / 512 KiB 分片；估分与飞书镜像默认关闭，关闭时不探活。
+
+### 汇报节奏
+
+创建实例前，agent 先给一屏创建简报（北极星、成功标准、范围、授权、模式、失败处置、模块、预算），只问一个确认问题；确认后才写实例。之后每个状态变化（建任务、开工、派工、提交候选、验收/返工/失败/阻塞、方向/拆分、收口）都有一条 2–6 行简报，固定写清「结论、依据、下一步、需要你」。非终态汇报同时写入 `progress`；终态和收口以实际生命周期事件为准，不伪造进展。旧实例升级后首次写入会报 `TEMPLATE_CHANGED`，审阅新方法后用带真实人类来源的 `rebind_template` 接受。
 
 适合跨会话、多阶段、需要证据的工程任务（UI 改造、重构、迁移、批量修复）和需要独立验收的交付；不适合一次性小改或纯问答。完整介绍见 [dsh/INTRO.md](dsh/INTRO.md)（[English](dsh/INTRO.en.md)）。
 
@@ -113,6 +118,7 @@ run 是创建参数；tasks 与 direction 是追加式事实记录；state 是�
 唯一日常 CLI：init / context / start / apply / handoff / check / rebuild / recover / stats / sync。支持 `--instance` 或通过注册表使用 `--route-key`，不全盘搜索实例。
 
 - [事件与命令示例、恢复](references/runtime.md)
+- [汇报协议与模板](references/reporting.md)
 - [创建与验收策略](references/governance.md)
 - [角色复用](references/agents.md) · [嵌套](references/nesting.md)
 - [估分计时](references/estimates.md) · [飞书镜像](references/feishu.md)

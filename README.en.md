@@ -29,7 +29,7 @@ Pick one installation (do not mix them):
 
 After installation the Plugins page lists **Serial Job Session**, new sessions advertise `serial-job-session`, the `sjs` tool is available, and Settings gains a **Serial Jobs** page for the plugin's parameters (below). Python 3.11+ is required; set `SJS_PYTHON` when `python` is not on `PATH`, and `SJS_TIMEOUT_MS` to change the per-call timeout (default 120000 ms).
 
-Version note: `package.json`'s `version` is the **plugin version** (currently `5.1.1`; git tag `v5.1.0` covers the functional release, 5.1.1 is the copy/documentation pass and has no new tag yet); the repository's `VERSION` file is the **skill protocol version** (`5.0.0`, the only input to an instance's template identity). They move independently: upgrading the plugin never reports `TEMPLATE_CHANGED` for existing instances; a protocol change requires the rebind described in INSTALL.
+Version note: from 5.2.0 on, `VERSION` (skill protocol) and `package.json`'s `version` (plugin) share one number. Template identity has two layers: `integrity` covers every installed file (including `VERSION`), while `method` tracks only shared-method files. A version bump alone no longer reports `TEMPLATE_CHANGED` for existing instances; a method-file change still requires the rebind described in INSTALL.
 
 ### What this plugin solves
 
@@ -38,7 +38,12 @@ It moves a long task from improvised chat execution to a serial job with a contr
 - **A dropped session never loses progress**: progress lives in instance files (append-only JSONL), and `context` restores the current card, authorization and menu in one read.
 - **Acceptance rests on evidence**: every card carries a contract, mandatory checks and evidence paths; an independent reviewer judges each item, and a failed or unknown mandatory check cannot be overridden by a score.
 - **Authorization stays bounded**: manual / conditional / full-AI modes, approvals that carry their source, and no agent can impersonate a human; the mode has no default.
+- **Proactive checkpoint reports**: confirm the North Star and full environment before creation; one short plain-language update for tasks, starts, dispatch, acceptance/failure and close-out. Non-terminal updates are also recorded in `progress`, so a dropped session can resume.
 - **Bounded cost**: a 12000-character context budget by default, logs rotating at 20 cards or 512 KiB, and estimate/Feishu modules off (no probing while off).
+
+### Reporting cadence
+
+Before creating an instance the agent sends a one-screen creation brief (North Star, success criteria, scope, authorization, mode, failure handling, modules, budget) and asks exactly one confirmation question; only then does it write the instance. Afterwards every state change (task creation, start, dispatch, candidate submission, acceptance/rework/failure/blocking, direction/nesting, close-out) gets a 2–6 line update with the same four parts: conclusion, evidence, next step, what the human must decide. Non-terminal updates are also written to `progress`; terminal conclusions and close-out rest on the actual lifecycle events. Existing instances report `TEMPLATE_CHANGED` on their first write after this upgrade and must be rebound through `rebind_template` with a real human source.
 
 Good fit: multi-session, multi-stage engineering work that needs evidence (UI rework, refactors, migrations, batch fixes) and deliveries requiring independent acceptance. Poor fit: one-shot small changes or pure Q&A. Full introduction: [dsh/INTRO.en.md](dsh/INTRO.en.md) ([中文](dsh/INTRO.md)).
 
@@ -100,7 +105,7 @@ Estimates/timing and Feishu mirroring are optional. Disabled modules do not coll
 
 ## Commands and verification
 
-The daily CLI is `scripts/sjs.py`: init / context / start / apply / handoff / check / rebuild / recover / stats / sync. Routes use an explicit registry, never a search across all instances. API examples, recovery and the full operation list are in [runtime](references/runtime.md); policies and modules are linked from [SKILL.md](SKILL.md).
+The daily CLI is `scripts/sjs.py`: init / context / start / apply / handoff / check / rebuild / recover / stats / sync. Routes use an explicit registry, never a search across all instances. API examples, recovery and the full operation list are in [runtime](references/runtime.md); the disclosure contract and templates are in [reporting](references/reporting.md); policies and modules are linked from [SKILL.md](SKILL.md).
 
 ```bash
 python -m unittest discover -s scripts -p "test*.py"

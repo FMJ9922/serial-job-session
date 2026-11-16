@@ -72,9 +72,19 @@
 - set_parameters：parameters 对象、reason、可选 task_id；create 也可带 parameters。业务方法参数依次继承共享默认、工作流、父任务、当前任务，context 返回有效值。空白/未填省略，false、0、空数组保留；该命名空间不是权限或策略配置。
 - estimate、timing、sync_receipt：见可选模块参考。sync_receipt 的 receipt 仅记录真实传输结果，不能用伪造回执掩盖错误。
 - usage：tokens、source；budget 可限制 max_tasks、max_active_agents、max_tokens 或带时区 deadline。只使用可信宿主数据。
-- rebind_template：template（新 version/integrity）、reason 和真实人类来源。resume：真实人类来源，解除 stop 失败策略造成的派发暂停。
+- rebind_template：template（新 version/integrity/method）、reason 和真实人类来源。resume：真实人类来源，解除 stop 失败策略造成的派发暂停。
 
 可选 approval 结构为 `{by, source}`，必须能对应真实人类指令。它是来源声明，不是系统鉴权。纯 worker/reviewer 等角色不能直接写控制日志，须由编排器接收结果并合并。
+
+## 输出与汇报
+
+工具输出是事实源，不是给人的汇报。每次 `init`、`apply`、`start`、`handoff` 后，按 [汇报](reporting.md) 把结果转成四段：结论、依据（任务 ID/标题、候选版本、证据路径）、下一步、需要你；有风险/未知时加一行。不要用 JSON 代替汇报。
+
+先读 `outcomes` 再写汇报：命令成功不等于业务推进成功。`start`/`accept` 返回 `allowed:false` 时任务仍是 ready/awaiting_acceptance；报告原因和需要人决定什么，不写“已开工/已完成”。`duplicate` 是原命令重试，不当作新进展。
+
+`progress` 除了给 handoff，也记录“人最近被告知什么”：`summary` 要一句能看懂的话，`questions`/`decisions`/`next_steps` 是可执行项。操作后仍是 ready/doing/awaiting_acceptance 时写一次；accepted/failed/cancelled 是终态，不能写，结论以生命周期事件为准，需要可复用恢复摘要时写有证据的 `knowledge`。不要把 `progress` 和同任务的终态操作放进同一条 apply。
+
+`context`/`handoff` 恢复时，第一条消息先复述北极星、当前卡或菜单、上次 `progress`，不要默默继续。默认 `context` 只自动选择 doing/awaiting_acceptance；ready 等开工、上一卡刚结束、失败后重启都可能没有当前任务——此时说明暂停原因和可选卡，请人选择或按模式选择；需要某张卡的历史进展时显式 `context --task-id ID`。
 
 ## 记录与恢复
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.2.0 — 2026-11-16
+
+关键节点主动汇报（human disclosure），并统一版本号。
+
+- 新增 `references/reporting.md`：检查点、四段格式、创建/建任务/开工/派工/验收/失败/阻塞/恢复/收口模板，以及错误路径、终态、duplicate、心跳和反例。
+- `SKILL.md` 增加「向人类汇报」硬规则；`governance.md` 增加创建简报与确认门；`runtime.md` 明确“工具输出≠汇报”、先读 `outcomes`、非终态 `progress`/终态对话、无当前任务的恢复分支；`agents.md` 增加派工/恢复披露；`nesting.md`、`estimates.md`、`feishu.md` 补充对应汇报。
+- DSH：`sjs` 工具描述、工具卡片标题、结果提醒和失败提示改为人类可读；对 `DECISIONS_REQUIRED`、`TEMPLATE_CHANGED`、`REVISION_CONFLICT`、`TASK_NOT_ACTIVE`、超时/提交未知、`allowed:false` 给定向提示；设置页补充汇报说明。
+- 版本统一：`VERSION` 与 `package.json.version` 同为 `5.2.0`，`skill-integrity.json.protocol_version` 随之为 `5.2.0`。`template_identity()` 新增 `method`（排除 `VERSION` 的方法身份），`integrity` 仍覆盖完整安装文件；`same_template` 优先比较 `method`，单纯升版本号不再要求 rebind。
+- 旧实例：5.2.0 本身改动了方法文件，首次写入会报 `TEMPLATE_CHANGED`；审阅新方法后用带真实人类来源的 `rebind_template` 接受。完成后再升版本号不再触发 rebind。
+- 测试：新增方法/安装身份真实文件测试、版本号变化不 rebind/方法变化仍 rebind、`progress` 终态与无当前任务恢复、DSH 标题/提醒/失败提示；`check-pack` 要求打包 `references/reporting.md`。
+
 ## 5.1.4 — 2026-10-28
 
 修复仅影响测试脚本的问题：`npm run smoke:stdin` 写死 `const python = 'python'`，在 `python` 指向 2.7 的机器上自己踩中了它要防的坑（`future feature annotations is not defined`）。

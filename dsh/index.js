@@ -547,6 +547,202 @@ export function renderResultText(value) {
   return `${trimmed.slice(0, MAX_OUTPUT_CHARS)}\n… output truncated at ${MAX_OUTPUT_CHARS} characters`
 }
 
+/** Human-readable labels for `apply` operations in card titles. */
+const OP_LABELS = {
+  create: '创建',
+  assess: '评估',
+  start: '开工',
+  report: '提交候选',
+  accept: '验收',
+  reject: '返工',
+  fail: '失败',
+  cancel: '取消',
+  block: '阻塞',
+  progress: '进展',
+  nest: '拆分',
+  revise_contract: '修订合同',
+  patch: '补证',
+  set_policy: '策略',
+  assess_direction: '方向评估',
+  apply_direction: '方向决定',
+  assign_role: '绑定角色',
+  invalidate_role: '失效角色',
+  knowledge: '经验',
+  set_overrides: '方法覆盖',
+  set_parameters: '参数',
+  estimate: '估分',
+  timing: '计时',
+  sync_receipt: '同步回执',
+  usage: '用量',
+  rebind_template: '重绑模板',
+  resume: '恢复',
+}
+
+/**
+ * Read the operation list of one `apply` call.
+ *
+ * @param {Record<string, unknown>} args tool arguments.
+ * @returns {Record<string, unknown>[]} valid operation objects.
+ */
+function operationsOf(args) {
+  const input = args && typeof args === 'object' ? args.input : undefined
+  const operations = input && typeof input === 'object' && Array.isArray(input.operations) ? input.operations : []
+  return operations.filter((op) => op && typeof op === 'object' && typeof op.op === 'string')
+}
+
+/**
+ * Build the human-readable title of one tool card.
+ *
+ * @param {Record<string, unknown>} args tool arguments.
+ * @returns {string} card title.
+ */
+export function describeCall(args) {
+  const command = typeof args?.command === 'string' ? args.command : ''
+  const base = `sjs ${command}`.trim()
+  if (command === 'init') return `${base} · ${args.dryRun === true ? '预检创建' : '创建实例'}`
+  if (command === 'context') return `${base} · 读取当前任务`
+  if (command === 'start') return `${base} · 任务 ${args.taskId ?? '?'}`
+  if (command === 'handoff') return `${base} · 任务 ${args.taskId ?? '?'}`
+  if (command === 'check') return `${base} · 校验实例`
+  if (command === 'rebuild') return `${base} · 重建快照`
+  if (command === 'recover') return `${base} · 恢复尾部`
+  if (command === 'stats') return `${base} · 估分统计`
+  if (command === 'sync') return `${base} · 飞书同步`
+  if (command === 'apply') {
+    const operations = operationsOf(args)
+    if (operations.length === 0) return `${base} · 写入事件`
+    if (
+      operations.length === 1 &&
+      operations[0].op === 'create' &&
+      typeof operations[0].title === 'string' &&
+      operations[0].title.trim().length > 0
+    ) {
+      return `${base} · 创建「${operations[0].title.trim()}」`
+    }
+    const counts = new Map()
+    for (const op of operations) {
+      const label = OP_LABELS[op.op] ?? op.op
+      counts.set(label, (counts.get(label) ?? 0) + 1)
+    }
+    const parts = []
+    for (const [label, count] of counts) {
+      if (parts.length === 4) {
+        parts.push(`等 ${operations.length} 项`)
+        break
+      }
+      parts.push(count > 1 ? `${label} ${count}` : label)
+    }
+    return `${base} · ${parts.join(' · ')}`
+  }
+  return base
+}
+
+/**
+ * Whether a successful result still leaves a human decision pending.
+ *
+ * @param {Record<string, unknown>} value tool result.
+ * @returns {boolean} whether any outcome was denied by policy or review.
+ */
+function decisionNeedsHuman(value) {
+  const outcomes = value?.data?.outcomes
+  return (
+    Array.isArray(outcomes) &&
+    outcomes.some((outcome) => outcome && outcome.decision && outcome.decision.allowed === false)
+  )
+}
+
+/**
+ * Whether an `apply` carries a business change rather than only a progress record.
+ *
+ * @param {Record<string, unknown>} args tool arguments.
+ * @returns {boolean} whether a human-facing report is warranted.
+ */
+function hasBusinessChange(args) {
+  const operations = operationsOf(args)
+  if (operations.length === 0) return true
+  return operations.some((op) => op.op !== 'progress')
+}
+
+/**
+ * Compose the reporting reminder prepended to a successful tool result.
+ *
+ * @param {Record<string, unknown>} args tool arguments.
+ * @param {Record<string, unknown>} value tool result.
+ * @returns {string} reminder text, or an empty string when no report is due.
+ */
+export function reportReminder(args, value) {
+  const command = typeof args?.command === 'string' ? args.command : ''
+  if (value?.data?.duplicate === true) return ''
+  if (command === 'apply' || command === 'start') {
+    if (command === 'apply' && !hasBusinessChange(args)) return ''
+    if (decisionNeedsHuman(value)) {
+      return (
+        '[向人类汇报] 本轮未推进：先读 outcomes 里的 decision/reason，向用户说明任务仍是 ' +
+        'ready/doing/awaiting_acceptance、为什么被拦、需要用户决定什么；不要写成“已开工/已完成”。'
+      )
+    }
+    return (
+      '[向人类汇报] 先用 2–6 行说明本轮改了什么、任务 ID/标题、证据或阻塞、下一步和需要用户决定的事项；' +
+      '不要只贴 JSON。'
+    )
+  }
+  if (command === 'init') {
+    return args?.dryRun === true
+      ? '[向人类汇报] 预检结果不是汇报：翻译成创建简报（北极星、模式、授权、失败处置、模块、预算），' +
+          '只问一个确认问题并等待回答。'
+      : '[向人类汇报] 先用创建简报复述北极星与全部创建环境，再说明实例路径、route_key 和下一步。'
+  }
+  if (command === 'context' || command === 'handoff') {
+    return (
+      '[向人类汇报] 恢复会话时：有当前任务就复述北极星、当前卡和上次进展；没有当前任务就说明暂停原因、' +
+      '可选卡和下一步，请用户选择或按模式选择。'
+    )
+  }
+  return ''
+}
+
+/**
+ * Build the error text for a failed CLI call, including a reporting hint.
+ *
+ * @param {Record<string, unknown>} args tool arguments.
+ * @param {{ code?: number | null, detail?: string, timedOut?: boolean, spawnError?: string, cwd?: string, timeoutMs?: number }} outcome failure facts.
+ * @returns {string} error text for the caller.
+ */
+export function buildFailureText(args, outcome) {
+  const command = typeof args?.command === 'string' ? args.command : ''
+  const detail = typeof outcome?.detail === 'string' ? outcome.detail.trim() : ''
+  let message
+  if (outcome?.timedOut) {
+    message = `sjs ${command} timed out after ${outcome.timeoutMs} ms in ${outcome.cwd ?? ''}`
+  } else if (outcome?.spawnError) {
+    message = `cannot start sjs: ${outcome.spawnError}`
+  } else {
+    message =
+      `sjs ${command} exited with ${outcome?.code}` +
+      (detail ? `:\n${detail.slice(0, MAX_OUTPUT_CHARS)}` : '')
+  }
+
+  let hint = '[向人类汇报] 不要只回复“命令失败”。说明错误码、已尝试动作和需要用户做什么。'
+  if (/DECISIONS_REQUIRED/.test(detail)) {
+    hint =
+      '[向人类汇报] DECISIONS_REQUIRED 表示创建参数缺失，不是普通失败：把 missing/choices/suggestions 逐项问用户，' +
+      '不要自行选默认值，也不要原样重试。'
+  } else if (/TEMPLATE_CHANGED/.test(detail)) {
+    hint =
+      '[向人类汇报] 共享方法已升级：先向用户说明变化、旧实例影响和需要确认的 rebind，' +
+      '得到真实人类确认后才 rebind_template；不要静默重绑。'
+  } else if (/REVISION_CONFLICT/.test(detail)) {
+    hint =
+      '[向人类汇报] revision 已变化：先重新 context 取当前 revision，说明刚刚发生了什么，再重试；' +
+      '不要用旧 revision 硬重试。'
+  } else if (/TASK_NOT_ACTIVE|TASK_NOT_READY/.test(detail)) {
+    hint = '[向人类汇报] 任务状态不允许该操作：先读 context 说明当前状态和需要用户做什么，不要反复重试。'
+  } else if (outcome?.timedOut) {
+    hint = '[向人类汇报] 结果未知：先用 context/check 核实是否已提交，再决定是否重试；向用户说明不确定性。'
+  }
+  return `${message}\n\n${hint}`
+}
+
 /**
  * Read and parse a JSON request body with a byte bound.
  *
@@ -759,7 +955,11 @@ function buildTool(ctx) {
       'travel to the CLI on stdin. Never pass `human: true` unless a real human gave the instruction in this ' +
       'conversation, and never invent evidence. The CLI returns UTF-8 JSON; a non-zero exit is reported as a ' +
       'tool error carrying the CLI diagnostics. Interpreter, timeout and extra arguments come from the ' +
-      'plugin settings page (Settings → 串行任务参数) unless the environment overrides them.',
+      'plugin settings page (Settings → 串行任务参数) unless the environment overrides them. ' +
+      'After every state-changing call (init/start/apply) send the user a short plain-language report before ' +
+      'the next tool call: what changed, task ids and titles, evidence or blockers, next step, and what the ' +
+      'human must decide. Read `outcomes` first — a successful call is not always business progress; ' +
+      '`allowed:false` means the task did not advance. The skill\'s reporting reference has the checkpoint list.',
     parameters: {
       type: 'object',
       additionalProperties: false,
@@ -835,8 +1035,10 @@ function buildTool(ctx) {
           stderr: { type: 'string' },
         },
       },
-      render(_args, value) {
-        return [{ type: 'text', text: renderResultText(value) }]
+      render(args, value) {
+        const text = renderResultText(value)
+        const reminder = reportReminder(args, value)
+        return [{ type: 'text', text: reminder ? `${reminder}\n\n${text}` : text }]
       },
     },
     async execute(args, exec) {
@@ -866,17 +1068,14 @@ function buildTool(ctx) {
       })
       if (exec.signal?.aborted) throw new Error('sjs cancelled')
       if (outcome.timedOut) {
-        throw new Error(`sjs ${args.command} timed out after ${timeoutMs} ms in ${cwd}`)
+        throw new Error(buildFailureText(args, { timedOut: true, cwd, timeoutMs }))
       }
       if (outcome.spawnError) {
-        throw new Error(`cannot start sjs: ${outcome.spawnError}`)
+        throw new Error(buildFailureText(args, { spawnError: outcome.spawnError }))
       }
       if (outcome.code !== 0) {
         const detail = [outcome.stderr.trim(), outcome.stdout.trim()].filter(Boolean).join('\n')
-        throw new Error(
-          `sjs ${args.command} exited with ${outcome.code}` +
-            (detail ? `:\n${detail.slice(0, MAX_OUTPUT_CHARS)}` : ''),
-        )
+        throw new Error(buildFailureText(args, { code: outcome.code, detail }))
       }
       let data
       const stdout = outcome.stdout.trim()
@@ -898,7 +1097,7 @@ function buildTool(ctx) {
     presentCall(args) {
       return {
         card: 'generic',
-        title: `sjs ${typeof args.command === 'string' ? args.command : ''}`.trim(),
+        title: describeCall(args),
         kind: 'execute',
         rawInput: args,
       }

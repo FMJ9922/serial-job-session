@@ -19,8 +19,10 @@ import { fileURLToPath } from 'node:url'
 import {
   apply,
   buildArgs,
+  buildFailureText,
   buildSkillRegistration,
   checkInstallation,
+  describeCall,
   isSupportedPython,
   name,
   parseFrontMatter,
@@ -28,6 +30,7 @@ import {
   pythonEnv,
   readSettings,
   renderResultText,
+  reportReminder,
   REQUIRED_RUNTIME_FILES,
   sanitizeSettings,
   settingsPath,
@@ -467,4 +470,73 @@ test('result rendering prefers parsed data and truncates long output', () => {
   const long = renderResultText({ stdout: 'x'.repeat(40_000) })
   assert.ok(long.length < 40_000)
   assert.ok(long.includes('output truncated'))
+})
+
+test('plugin, skill protocol and integrity baseline share one version', () => {
+  const version = readFileSync(path.join(ROOT, 'VERSION'), 'utf8').trim()
+  const baseline = JSON.parse(readFileSync(path.join(ROOT, 'skill-integrity.json'), 'utf8'))
+  assert.equal(MANIFEST.version, version)
+  assert.equal(baseline.protocol_version, version)
+})
+
+test('the skill carries the reporting contract and its reference', () => {
+  const skill = buildSkillRegistration()
+  assert.ok(skill.content.includes('向人类汇报'))
+  assert.ok(skill.content.includes('references/reporting.md'))
+  assert.ok(existsSync(path.join(ROOT, 'references', 'reporting.md')))
+})
+
+test('the tool description requires a human-facing report', () => {
+  const { ctx, tools } = fakeContext()
+  apply(ctx)
+  const description = tools[0].description
+  assert.ok(description.includes('report'))
+  assert.ok(description.includes('outcomes'))
+  assert.ok(description.includes('allowed:false'))
+})
+
+test('call titles are human-readable', () => {
+  assert.equal(describeCall({ command: 'init' }), 'sjs init · 创建实例')
+  assert.equal(describeCall({ command: 'init', dryRun: true }), 'sjs init · 预检创建')
+  assert.equal(describeCall({ command: 'start', taskId: '1' }), 'sjs start · 任务 1')
+  assert.equal(describeCall({ command: 'context' }), 'sjs context · 读取当前任务')
+  assert.equal(
+    describeCall({ command: 'apply', input: { operations: [{ op: 'create', title: '修复界面' }] } }),
+    'sjs apply · 创建「修复界面」',
+  )
+  assert.equal(
+    describeCall({ command: 'apply', input: { operations: [{ op: 'create' }, { op: 'start' }] } }),
+    'sjs apply · 创建 · 开工',
+  )
+  const { ctx, tools } = fakeContext()
+  apply(ctx)
+  assert.equal(tools[0].presentCall({ command: 'start', taskId: '1' }).title, 'sjs start · 任务 1')
+})
+
+test('report reminders skip duplicates and progress-only applies', () => {
+  assert.equal(reportReminder({ command: 'apply', input: { operations: [{ op: 'progress' }] } }, { data: {} }), '')
+  assert.equal(reportReminder({ command: 'apply', input: { operations: [{ op: 'create' }] } }, { data: { duplicate: true } }), '')
+  assert.ok(
+    reportReminder(
+      { command: 'apply', input: { operations: [{ op: 'create' }] } },
+      { data: { outcomes: [{ decision: { allowed: false } }] } },
+    ).includes('未推进'),
+  )
+  assert.ok(
+    reportReminder(
+      { command: 'apply', input: { operations: [{ op: 'create' }] } },
+      { data: { outcomes: [] } },
+    ).includes('向人类汇报'),
+  )
+  assert.ok(reportReminder({ command: 'context' }, { data: {} }).includes('没有当前任务'))
+  assert.ok(reportReminder({ command: 'init', dryRun: true }, { data: {} }).includes('创建简报'))
+})
+
+test('failure text carries targeted reporting guidance', () => {
+  assert.ok(buildFailureText({ command: 'init' }, { code: 1, detail: 'DECISIONS_REQUIRED' }).includes('逐项问'))
+  assert.ok(buildFailureText({ command: 'apply' }, { code: 1, detail: 'TEMPLATE_CHANGED' }).includes('rebind'))
+  assert.ok(
+    buildFailureText({ command: 'apply' }, { timedOut: true, timeoutMs: 120_000, cwd: 'x' }).includes('结果未知'),
+  )
+  assert.ok(buildFailureText({ command: 'apply' }, { code: 1, detail: 'boom' }).includes('命令失败'))
 })

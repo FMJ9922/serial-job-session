@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Serial Job Session",
-    "description": "Turns a long AI task into a serial workflow with a contract, versions and evidence: a dropped session never loses context, and acceptance rests on evidence. Includes the sjs tool and a settings panel."
+    "description": "Turns a long AI task into a serial workflow with a contract, versions and evidence: proactive updates at key checkpoints, no lost context across sessions, and acceptance backed by evidence. Includes the sjs tool and a settings panel."
   }
 }

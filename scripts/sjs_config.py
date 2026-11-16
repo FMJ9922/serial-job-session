@@ -54,11 +54,41 @@ def number(value, minimum=0, maximum=None):
     return isinstance(value, (float, int)) and not isinstance(value, bool) and math.isfinite(value) and value >= minimum and (maximum is None or value <= maximum)
 
 
+# Release metadata that must not change the shared-method compatibility identity.
+# The full manifest digest still covers it for installation integrity.
+RELEASE_METADATA = {"VERSION"}
+
+
+def method_files(files):
+    """Return the manifest file map without release-only metadata."""
+    return {key: value for key, value in files.items() if key not in RELEASE_METADATA}
+
+
 def template_identity():
-    # Use the release manifest as a stable shared-method identity; check's full
-    # integrity pass detects unrecorded changes without scanning on every turn.
+    # Two identities. ``integrity`` covers every tracked installation file and
+    # keeps the full integrity pass authoritative for VERSION changes.
+    # ``method`` excludes release-only metadata, so bumping the unified version
+    # alone never forces a rebind; only shared-method files do.
     manifest = json.loads((ROOT / "skill-integrity.json").read_text(encoding="utf-8"))
-    return {"version": (ROOT / "VERSION").read_text().strip(), "integrity": digest(manifest["files"])}
+    files = manifest["files"]
+    return {
+        "version": (ROOT / "VERSION").read_text().strip(),
+        "integrity": digest(files),
+        "method": digest(method_files(files)),
+    }
+
+
+def same_template(left, right):
+    """Compare template compatibility, not the release version.
+
+    Instances created before 5.2.0 store only ``{version, integrity}``. Compare
+    their full digest so the one-time method upgrade still asks for a rebind;
+    after that rebind the stored identity carries ``method`` and later version
+    bumps stay compatible.
+    """
+    if isinstance(left, dict) and isinstance(right, dict) and "method" in left and "method" in right:
+        return left["method"] == right["method"]
+    return left == right
 
 
 def policy_errors(policy):
