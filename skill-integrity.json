@@ -1,7 +1,7 @@
 {
   "schema": "serial-job-session-integrity/v1",
-  "protocol_version": "5.2.0",
-  "generated_at": "2026-10-28T12:18:35+08:00",
+  "protocol_version": "5.2.1",
+  "generated_at": "2026-11-16T12:12:05+08:00",
   "files": {
     "CREDITS.md": "0ee6eed00d0e954ab122767059677662feea7c66f60e6c45bb04cd97d4e1bc88",
     "defaults.json": "2aad3905b8e9f1caa36cb4f3baac62c2c3110be992f9afd63925b43202686de8",
@@ -34,6 +34,6 @@
     "scripts/test_sjs_modules.py": "75207bec04eb36c2eda067b25c946c8f4817d633109f37edee49f3334458cda9",
     "scripts/test_sjs_v5.py": "c8746fd55681fb8f64d8aeff201db943447b6c270036a6e93e6a82b756551dfa",
     "SKILL.md": "7b20e122e9909848f20b29597cba4fac00d6f0bc92d2d2a0cbe38d11dc21d0fd",
-    "VERSION": "e791457c25b99d69f3d5ca028f6a7f6d88f7e2d85af5162a92a8c5f3aecf59b0"
+    "VERSION": "4e001f5f34a8940927b497e5657a1bba9a35094b2c1f992de2fbee40af237d5b"
   }
 }

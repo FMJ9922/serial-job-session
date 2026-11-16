@@ -2,7 +2,45 @@
 
 # serial-job-session v5
 
-A lightweight long-running workflow for AI agents: **shared methods, instance parameters, append-only records**. Contracts, independent review, bounded rework, reusable agent sessions and nested tasks share one event store.
+**An AI-assisted orchestration protocol for commercial work that spans days and weeks.**
+
+Keep sustained AI work aligned with its goals and acceptance criteria. **Persist the key facts, make handoffs traceable, and reduce dependence on chat memory and context compaction.**
+
+Once work outgrows one agent's context, people often have to keep splitting tasks, repeating background, coordinating executors, and checking whether “done” still means what it meant before several rounds of rework. serial-job-session helps AI assist with that orchestration: goals, task contracts, candidate versions, reviews, failures and next steps live in the project. A resumed session reads the current state, follows dependencies and evaluates work against agreed criteria.
+
+**Routes may change, with recorded reasons and explicit carryover of outstanding acceptance obligations.** People choose manual, conditional or full-AI operation and establish their involvement and authorization boundaries up front.
+
+## Who it is for
+
+People already using AI for commercial work that spans days or weeks: iterative development, ongoing refactors, system migrations, and engineering efforts involving multiple people or agents. People and teams supply goals, domain knowledge and success criteria; AI uses the protocol to assist with decomposition, orchestration, execution and review.
+
+In agile development, an iteration goal can be broken into dependent, independently verifiable tasks, with routes adjusted as new evidence appears. Task records carry facts across handoffs; existing backlog, sprint and team collaboration tools retain their own roles.
+
+## What it focuses on preserving
+
+1. **Acceptance criteria remain effective across attempts.** Reviews bind to contract and candidate versions; a new candidate cannot reuse an old acceptance. A failed or unknown mandatory check, or one without an evidence reference, cannot be outweighed by a high score. Removing or changing an existing mandatory check requires a recorded real human approval and invalidates the old candidate and assessments.
+2. **A different session or executor has a recorded basis for continuing.** Proposals, work in progress, candidates, accepted work and failures have distinct states. Append-only records retain history; `context` / `handoff` supplies the current contract, dependencies, feedback and next steps. Handoffs do not depend solely on a compacted chat summary.
+3. **Routes can change without silently dropping unfinished acceptance work.** Direction assessments record alternatives, reasons and unknowns before adoption under the selected mode. When tasks are reorganized, the orchestrator must explicitly identify which contracts carry outstanding obligations. Original failures remain recorded, and failed dependencies do not count as accepted.
+4. **People choose their involvement and can see key changes.** Starts, direction and acceptance follow manual, conditional or full-AI policy. Checkpoint briefs are required to explain results, evidence, next steps and pending decisions. Rework is bounded; exhaustion stops dispatch or permits independent work according to policy, preserving results and recovery references.
+5. **Validated methods can be reused.** A shared skill holds methods; instances hold parameters and facts. Lessons carry evidence references, and method upgrades require explicit adoption. Projects do not need to copy the entire framework or repeat every rule at each handoff.
+
+### A concrete example
+
+A two-week system migration requires preserved behavior, regression tests and validation in the real environment. If the original approach fails, AI can assess an alternative and reorder tasks; real-environment validation must still be explicitly carried into subsequent contracts. A new candidate with passing unit tests but an unknown mandatory environment check cannot be accepted as complete. That gap remains visible after a session change.
+
+### How it fits with planning and multi-agent dispatch
+
+Planning tools help decide what to do next; dispatch tools call models and executors. This protocol focuses on maintaining goals, contracts, versions, dependencies, decisions and handoff records throughout execution. It can work alongside the host's existing planning and collaboration tools. Model selection, agent creation and tool execution are provided by the host; no fixed combination of stronger and weaker models is required.
+
+These are this project's design priorities, not claims of market exclusivity. Workflows with equivalent mechanisms should be compared on usability and delivery outcomes in real tasks.
+
+### Limits of the promise
+
+- The CLI checks versions, task states, dependencies, recorded reviewer identities and mandatory check results. It does not establish that evidence is genuine, tests are sufficient, criteria are correct, or a replan semantically covers every original obligation. Actual deliverables still need tests, independent review and domain judgment.
+- Authorization and role identities are source declarations, not security authentication or an OS sandbox. Logs are not a tamper-proof audit system. Reliability depends on truthful host records and appending events through public operations.
+- Reporting, handoffs and obligation carryover include instructions agents must follow; compliance is not guaranteed across hosts or models. Lessons need judgment and maintenance. No automatic learning, zero-drift guarantee or fixed token/labor savings are promised.
+
+Small one-shot tasks usually do not need this process. It becomes more useful when repeated handoffs, course corrections and verification are already a substantial part of the work.
 
 ## Quick start
 
@@ -31,21 +69,11 @@ After installation the Plugins page lists **Serial Job Session**, new sessions a
 
 Version note: from 5.2.0 on, `VERSION` (skill protocol) and `package.json`'s `version` (plugin) share one number. Template identity has two layers: `integrity` covers every installed file (including `VERSION`), while `method` tracks only shared-method files. A version bump alone no longer reports `TEMPLATE_CHANGED` for existing instances; a method-file change still requires the rebind described in INSTALL.
 
-### What this plugin solves
-
-It moves a long task from improvised chat execution to a serial job with a contract, versions and evidence:
-
-- **A dropped session never loses progress**: progress lives in instance files (append-only JSONL), and `context` restores the current card, authorization and menu in one read.
-- **Acceptance rests on evidence**: every card carries a contract, mandatory checks and evidence paths; an independent reviewer judges each item, and a failed or unknown mandatory check cannot be overridden by a score.
-- **Authorization stays bounded**: manual / conditional / full-AI modes, approvals that carry their source, and no agent can impersonate a human; the mode has no default.
-- **Proactive checkpoint reports**: confirm the North Star and full environment before creation; one short plain-language update for tasks, starts, dispatch, acceptance/failure and close-out. Non-terminal updates are also recorded in `progress`, so a dropped session can resume.
-- **Bounded cost**: a 12000-character context budget by default, logs rotating at 20 cards or 512 KiB, and estimate/Feishu modules off (no probing while off).
-
 ### Reporting cadence
 
-Before creating an instance the agent sends a one-screen creation brief (North Star, success criteria, scope, authorization, mode, failure handling, modules, budget) and asks exactly one confirmation question; only then does it write the instance. Afterwards every state change (task creation, start, dispatch, candidate submission, acceptance/rework/failure/blocking, direction/nesting, close-out) gets a 2–6 line update with the same four parts: conclusion, evidence, next step, what the human must decide. Non-terminal updates are also written to `progress`; terminal conclusions and close-out rest on the actual lifecycle events. Existing instances report `TEMPLATE_CHANGED` on their first write after this upgrade and must be rebound through `rebind_template` with a real human source.
+Before creating an instance the protocol requires the agent to send a one-screen creation brief (North Star, success criteria, scope, authorization, mode, failure handling, modules, budget) and ask exactly one confirmation question; only then does it write the instance. Afterwards every state change (task creation, start, dispatch, candidate submission, acceptance/rework/failure/blocking, direction/nesting, close-out) requires a 2–6 line update with the same four parts: conclusion, evidence, next step, what the human must decide. Non-terminal updates are also written to `progress`; terminal conclusions and close-out rest on the actual lifecycle events. Version 5.2.0 introduced method changes: earlier instances need review and a `rebind_template` with a real human source. The 5.2.0 → 5.2.1 update changes introductions and release metadata only; method identity is unchanged.
 
-Good fit: multi-session, multi-stage engineering work that needs evidence (UI rework, refactors, migrations, batch fixes) and deliveries requiring independent acceptance. Poor fit: one-shot small changes or pure Q&A. Full introduction: [dsh/INTRO.en.md](dsh/INTRO.en.md) ([中文](dsh/INTRO.md)).
+DSH installation and usage details: [dsh/INTRO.en.md](dsh/INTRO.en.md) ([中文](dsh/INTRO.md)).
 
 ### Parameter panel (Web UI)
 
