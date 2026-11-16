@@ -1,6 +1,6 @@
 {
   "name": "dsh-serial-job-session",
-  "version": "5.2.1",
+  "version": "5.2.2",
   "description": "AI-assisted orchestration for commercial work spanning days and weeks: persistent goals, versioned acceptance contracts, evidence and recoverable handoffs.",
   "type": "module",
   "license": "MIT",

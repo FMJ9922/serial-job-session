@@ -8,6 +8,8 @@
 
 从 5.2.0 起，`VERSION` 与根 `package.json` 的 `version` 统一为同一号。`sjs_config.template_identity()` 返回 `{version, integrity, method}`：`integrity` 覆盖完整安装文件（含 `VERSION`），`method` 排除 `VERSION` 等发布元数据。单纯升版本号不会让旧实例报 `TEMPLATE_CHANGED`；方法文件变化仍会。5.2.0 本身改动了方法文件，旧实例首次写入会报 `TEMPLATE_CHANGED`，审阅新方法后用带真实人类来源的 `rebind_template` 接受。
 
+5.2.2 增加任务命名与工作层级披露，方法身份变化；已绑定 5.2.0/5.2.1 的实例也需审阅后显式重绑定一次。此操作保留原任务、ID、历史、预算和验收义务，不必重建实例。
+
 `run.json` 保存创建时显式参数；不要手改运行中实例的创建配置。策略变化使用 set_policy 事件。模板重绑定也只追加事件，历史配置和判断保留。共享模板的身份可用 Python API `sjs_config.template_identity()` 获取（`method` 是兼容身份，`integrity` 是完整安装摘要），或从新安装的 init --dry-run 返回值获取。
 
 本版本仅支持新建 v5 实例，不保留旧版执行器或导入器。需要继续使用旧实例时保留原版本安装；v5 不扫描、不转换、不删除它们。

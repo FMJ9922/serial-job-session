@@ -1,20 +1,20 @@
 {
   "schema": "serial-job-session-integrity/v1",
-  "protocol_version": "5.2.1",
-  "generated_at": "2026-11-16T12:12:05+08:00",
+  "protocol_version": "5.2.2",
+  "generated_at": "2026-11-16T12:30:29+08:00",
   "files": {
     "CREDITS.md": "0ee6eed00d0e954ab122767059677662feea7c66f60e6c45bb04cd97d4e1bc88",
     "defaults.json": "2aad3905b8e9f1caa36cb4f3baac62c2c3110be992f9afd63925b43202686de8",
     "examples/conditional.json": "86ae6bf5224b5970bb6658ea34846604a0ee8a061476acac0319f31cb7ca8c40",
     "examples/full-ai.json": "c127f25a8f455c40e332e2fcf104e1238f834d71dcc4a4fa40fceaccf06a9548",
     "examples/manual.json": "300d78ab7590060cec71fec4816519c15b4a2aec8d0dc6043077bf1441877fce",
-    "INSTALL.md": "2279d08c4552a65169537938affeb2d3cb25dc85655156a43ecb7d351b937d45",
-    "references/agents.md": "eaf8376abbe49800ca16046cd109cea4fa9554b61fdb9d2097c2dbce80eaf4c1",
+    "INSTALL.md": "fb3b4f03d1a032bd1e887197822b9f95ea30a10ad56a3c21451fe3a14033bf16",
+    "references/agents.md": "4349de51c56bc4141bf93cdc5817bee5a95857e4c492fba46e51a703f4159169",
     "references/estimates.md": "66f246a3c6d9af208a0e734417347ad2722f3b952f0487f4a0937c57e310283d",
     "references/feishu.md": "f5d76f4328683638f2b7d6cfb6a11163e41c88a4552175d72530f5eaa7cfedba",
     "references/governance.md": "59bf08748d9f509a4d69f14c3eb8d6d48ffa6febc86ec462cf52027bfbe9b232",
-    "references/nesting.md": "59a65c862d9fc242ead83d31383a162a07747104d8debea7f6bb0ad747b2e7bc",
-    "references/reporting.md": "f01bfe67089babf9e45e6059f6d8cd4fff5155eef7cb5623811584d86cf1c1ca",
+    "references/nesting.md": "c093fede878b010f97ca4aa18c7fed81bfa6a84296a89dd31e00e9499fa9b8e2",
+    "references/reporting.md": "cf0a6315f1db63da41eb8bc03a79c83167cbc17b10ba04ccf24e1fddff869ec8",
     "references/runtime.md": "967c26839e39c571dba4dcf433c47148be5438f49917f7ce0a119a1f85b843d4",
     "roles.json": "9680658b6075e03a43a957d7ac97885c34fccd0dcdf342c25cfa342a5bfc2c41",
     "schemas/command.schema.json": "667764df309038a955cf25f4301db1c07482d948cbeb3ea3270df86a6bd69e6a",
@@ -33,7 +33,7 @@
     "scripts/test_sjs_cli.py": "c592d5c961879c7237393166fc6b0eb465c95750c87d52ddf93279b094454d0b",
     "scripts/test_sjs_modules.py": "75207bec04eb36c2eda067b25c946c8f4817d633109f37edee49f3334458cda9",
     "scripts/test_sjs_v5.py": "c8746fd55681fb8f64d8aeff201db943447b6c270036a6e93e6a82b756551dfa",
-    "SKILL.md": "7b20e122e9909848f20b29597cba4fac00d6f0bc92d2d2a0cbe38d11dc21d0fd",
-    "VERSION": "4e001f5f34a8940927b497e5657a1bba9a35094b2c1f992de2fbee40af237d5b"
+    "SKILL.md": "fefa168911dbbde41e2e44cf383b7d34b4ffe238de6947400a753cd98a1cb279",
+    "VERSION": "486d2ad103a38d1f6f661e9d3191e024b7e2fae6e6ce99ff03b073f43cd0f65b"
   }
 }

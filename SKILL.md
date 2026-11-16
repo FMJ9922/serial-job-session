@@ -39,7 +39,9 @@ metadata:
 
 有活动任务且操作后仍是非终态时，把同一结论写进 `progress`（summary/questions/decisions/next_steps），供 `context`/`handoff` 恢复；终态、创建前和收口后只发对话，必要时用 `knowledge`。写 `progress` 本身不再触发新一轮汇报；`duplicate` 不当作新进展；心跳只是漏报补救。无当前任务时先说明暂停原因和可选卡，不静默继续。
 
-细则、模板与正反例见 [汇报](references/reporting.md)。
+任务名称是面向人的主称谓，建议用「对象＋预期结果」；ID 只作稳定追溯，字母或 Stage 不能代替名称。开工、换批次、派工、提交、验收和返工时，披露所属任务名、当前工作名及层级，并说明目标、产物、验收和实际状态。区分正式任务卡、卡内实施批次、候选版本和返工次数；批次结束不等于任务已验收。
+
+细则、命名与层级示例见 [汇报](references/reporting.md)；需要独立子合同时见 [嵌套](references/nesting.md)。
 
 ## 数据与协作边界
 
