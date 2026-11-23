@@ -41,8 +41,39 @@ class CliTests(unittest.TestCase):
             apply(create(), {"op": "assess", "task_id": "a", "phase": "feasibility", "assessment": assessment()},
                   {"op": "progress", "task_id": "a", "summary": "Baseline ready", "next_steps": ["Implement candidate"]})
             cli("start", extra=("--task-id", "a", "--command-id", "start-a"))
+            details = {"data/v1": {"turn~out": ["initial", "confirmed"]}, "bad~2escape": True}
+            apply({"op": "set_parameters", "task_id": "a", "parameters": details, "reason": "Import fixture"})
+            pointer = "/parameters/data~1v1/turn~0out/1"
+            args = ("--task-id", "a", "--view", "full", "--pointer")
+            part = cli("context", extra=(*args, pointer))
+            self.assertEqual(part["revision"], store.load_snapshot(instance)["revision"])
+            self.assertEqual(part["task_id"], "a")
+            self.assertEqual(part["pointer"], pointer)
+            self.assertEqual(part["value"], "confirmed")
+            index = cli("handoff", extra=(*args, "/parameters/data~1v1", "--keys-only"))
+            self.assertEqual(index["keys"], ["turn~out"])
+            self.assertNotIn("value", index)
+            invalid_index = cli("context", extra=(*args, pointer, "--keys-only"), expected=1)
+            self.assertEqual(invalid_index["error"], "POINTER_OBJECT_REQUIRED")
+            array_pointer = "/parameters/data~1v1/turn~0out"
+            for invalid in ("/parameters/missing", array_pointer + "/-1", array_pointer + "/01", "/parameters/bad~2escape"):
+                with self.subTest(pointer=invalid):
+                    self.assertFalse(cli("context", extra=(*args, invalid), expected=1)["ok"])
             handoff = cli("handoff", extra=("--task-id", "a", "--role", "worker"))
             self.assertEqual(handoff["task"]["progress"]["summary"], "Baseline ready")
+            self.assertEqual(cli("handoff", extra=("--task-id", "a", "--role", "worker", "--view", "full")), handoff)
+            self.assertEqual(cli("handoff", expected=1)["error"], "TASK_ID_REQUIRED")
+            for name in ("context", "handoff"):
+                recovered = cli(name, extra=("--view", "recovery"))
+                self.assertEqual(recovered["schema"], "sjs-recovery/v5")
+                self.assertEqual(recovered["task_id"], "a")
+                self.assertEqual(recovered["task"]["progress"], handoff["task"]["progress"])
+                self.assertFalse(recovered["dispatch"]["allowed"])
+            wrong_view = cli("context", extra=("--view", "recovery", "--pointer", pointer), expected=1)
+            self.assertEqual(wrong_view["error"], "POINTER_REQUIRES_FULL_VIEW")
+            invalid_write = cli("apply", payload={}, extra=("--view", "recovery"), expected=1)
+            self.assertEqual(invalid_write["error"], "CONTEXT_OPTIONS_REQUIRE_READ_COMMAND")
+            self.assertEqual(store.load_snapshot(instance)["revision"], part["revision"])
             apply({"op": "report", "task_id": "a", "candidate_version": "v1", "by": {"id": "worker", "kind": "agent"}, "evidence": ["artifacts/proof.json"]})
             data = assessment("acceptance", candidate_version="v1", contract_version=1, by={"id": "reviewer", "kind": "agent"},
                               checks={"works": {"status": "passed", "evidence": ["artifacts/proof.json"]}})

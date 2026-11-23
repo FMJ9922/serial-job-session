@@ -325,6 +325,14 @@ test('the tool schema exposes every v5 subcommand and the shared options', () =>
   for (const key of ['instance', 'routeKey', 'input', 'dryRun', 'human', 'extraArgs']) {
     assert.ok(parameters.properties[key], `missing parameter ${key}`)
   }
+  assert.deepEqual(parameters.properties.view.enum, ['recovery', 'full'])
+  assert.equal(parameters.properties.pointer.type, 'string')
+  assert.equal(parameters.properties.keysOnly.type, 'boolean')
+  assert.deepEqual(buildArgs({ command: 'context', pointer: '/parameters', keysOnly: true }, false),
+    ['--pointer', '/parameters', '--keys-only', 'context'])
+  assert.deepEqual(buildArgs({ command: 'handoff', view: 'recovery' }, false), ['--view', 'recovery', 'handoff'])
+  assert.deepEqual(buildArgs({ command: 'context', view: 'full', pointer: '/task/contract' }, false),
+    ['--view', 'full', '--pointer', '/task/contract', 'context'])
 })
 
 test('argv puts options before the subcommand and maps booleans to flags', () => {

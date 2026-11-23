@@ -247,7 +247,7 @@
 - 未完成/失败/取消：<任务名称 + ID + 原因 + 保留成果>
 - 证据：<关键路径>
 - 经验：<knowledge id 或“无新增”>
-- 恢复：说 route_key：意图，或运行 context --instance <路径>
+- 恢复：说 route_key：意图，或运行 context --view recovery --instance <路径>
 - 需要你：<待决项或「无」>
 ```
 

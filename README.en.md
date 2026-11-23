@@ -49,7 +49,7 @@ Python 3.11+, standard library only. Install in your host's skill directory; ins
 ```bash
 python scripts/sjs.py init --instance <project>/.cursor/workflows/demo --input examples/manual.json --dry-run
 python scripts/sjs.py init --instance <project>/.cursor/workflows/demo --input examples/manual.json
-python scripts/sjs.py context --instance <project>/.cursor/workflows/demo
+python scripts/sjs.py context --view recovery --instance <project>/.cursor/workflows/demo
 ```
 
 At creation, ask only for missing choices: manual / conditional / full AI; conditional risk and score thresholds; failure handling; optional estimates/timing and Feishu Base mirroring. **There is no default autonomy mode.** Suggested values need human confirmation. Existing answers persist across tasks; task-specific exceptions are recorded explicitly.

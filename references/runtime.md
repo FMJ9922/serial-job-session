@@ -8,7 +8,15 @@
 
 初始化生成四文件与实例外 `.serial-job-session/instances.json` 注册表；唯一 route_key 通过注册表定位。实例必须在共享 skill 目录外，包括其 output 子目录也不能作为运行实例。相对路径不依赖创建 skill 的本机位置。已存在目录和重复口令拒绝覆盖。
 
-`context --instance PATH [--task-id ID] [--role ROLE] [--domain DOMAIN] [--host-session SESSION] [--since REV] [--max-chars N]` 返回有限菜单、当前任务、直接依赖和相关经验。无活动任务时只显示菜单，不擅选历史卡。handoff 使用同样参数，但必须点名 task-id。
+接手任务时先运行 `context --instance PATH --view recovery`，交接使用 `handoff --instance PATH --view recovery [--task-id ID] [--role ROLE]`。有唯一活动叶卡时直接展示，有多个时按返回的候选 ID 选择。查看指定卡可传 `--task-id`。读最近一次 progress 的结论、决定、下一步，对照候选和合同检查确认实际做到哪一步。
+
+恢复视图保留目标、全部合同检查、授权范围、预算及暂停依据。它用于定位工作，宿主在派发或写入前还应核对最新用户指令、实例 revision 和当前完整条款。工作流停派、任务阻塞、用户要求暂停时均应尊重相应范围。历史暂停记录可能只有自然语言，请阅读原文；没有匹配到暂停提示也不能据此推断有执行权限。
+
+在已有 `set_parameters` 操作中可按用户指令的实际范围记录 `recovery_pause: {paused: true, source: "用户指令的可核对来源"}`。工作流范围省略 task_id，任务范围指定 task_id。明确恢复后在同一范围记录 `paused: false` 及新来源，并更新相关任务的最新进度。恢复视图也检查祖先任务的暂停。结构化标记用于交接，CLI 的失败停派及原有授权仍各自生效。老实例中，最新进度里明确的暂停表述可显示为 `review_pause`，附原话供宿主核对。
+
+大合同的额外条款及继承参数保留在完整视图。使用 `context --instance PATH --view full --task-id ID` 读取对应任务；取单个字段可加 `--pointer /task/contract/checks/0` 或 `--pointer /parameters/参数名`。对对象使用 `--pointer /parameters --keys-only` 可先列键名。JSON Pointer 中键名的 `~`、`/` 分别写成 `~0`、`~1`。跨调用核对 revision，变更后重新读取相关约束。开始执行或验收前读取适用的方法、授权例外与所引用的真实证据。
+
+显式读取视图和字段也适用于方法升级前的 v5 快照。精简视图的 `rebind_required` 表示写入前是否需要审阅新方法并显式重绑定。省略视图与字段选项时保留原有完整接口及其模板校验。`context --instance PATH [--task-id ID] [--role ROLE] [--domain DOMAIN] [--host-session SESSION] [--since REV] [--max-chars N]` 返回当前任务、直接依赖和相关经验。完整模式下 handoff 须点名 task-id。
 
 运行时不为找卡扫描目录。默认上下文预算12000字符，优先删减可选菜单和经验；合同、授权及约束不截断，超限明确告警。输出中的 evidence 是引用，不代表脚本读取或核实了证据正文。
 
@@ -84,7 +92,7 @@
 
 `progress` 除了给 handoff，也记录“人最近被告知什么”：`summary` 要一句能看懂的话，`questions`/`decisions`/`next_steps` 是可执行项。操作后仍是 ready/doing/awaiting_acceptance 时写一次；accepted/failed/cancelled 是终态，不能写，结论以生命周期事件为准，需要可复用恢复摘要时写有证据的 `knowledge`。不要把 `progress` 和同任务的终态操作放进同一条 apply。
 
-`context`/`handoff` 恢复时，第一条消息先复述北极星、当前卡或菜单、上次 `progress`，不要默默继续。默认 `context` 只自动选择 doing/awaiting_acceptance；ready 等开工、上一卡刚结束、失败后重启都可能没有当前任务——此时说明暂停原因和可选卡，请人选择或按模式选择；需要某张卡的历史进展时显式 `context --task-id ID`。
+用精简视图恢复时，第一条消息说明暂停或阻塞情况、当前卡或可选卡、上次实际进展与下一步。查看指定历史任务用 `context --view recovery --task-id ID`。
 
 ## 记录与恢复
 

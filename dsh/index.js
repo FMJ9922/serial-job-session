@@ -320,6 +320,9 @@ export function buildArgs(args, usesStdin, settingsExtraArgs) {
   push('--role', args.role)
   push('--domain', args.domain)
   push('--host-session', args.hostSession)
+  push('--view', args.view)
+  if (typeof args.pointer === 'string') argv.push('--pointer', args.pointer)
+  if (args.keysOnly === true) argv.push('--keys-only')
   push('--since', args.since)
   push('--max-chars', args.maxChars)
   push('--event', args.event)
@@ -950,7 +953,8 @@ function buildTool(ctx) {
     name: 'sjs',
     description:
       'Run the serial-job-session v5 CLI (scripts/sjs.py) inside the current session working directory. ' +
-      'It is the only daily entry point of that workflow: read a working context with `context`, then write ' +
+      'Start a handoff with command=context and view=recovery. Check the selected task, pause instructions and ' +
+      'outstanding checks. Use view=full for details before acting within the current authorization. Write ' +
       'an append-only event with `apply` (or the `start` shortcut). Feed JSON payloads through `input`; they ' +
       'travel to the CLI on stdin. Never pass `human: true` unless a real human gave the instruction in this ' +
       'conversation, and never invent evidence. The CLI returns UTF-8 JSON; a non-zero exit is reported as a ' +
@@ -1002,6 +1006,9 @@ function buildTool(ctx) {
         role: { type: 'string', description: 'Role context to load (orchestrator, worker, reviewer, ...).' },
         domain: { type: 'string', description: 'Domain context to load.' },
         hostSession: { type: 'string', description: 'Host session id used for role reuse.' },
+        view: { type: 'string', enum: ['recovery', 'full'], description: 'Use recovery for a concise handoff. Full is the original context format.' },
+        pointer: { type: 'string', description: 'Read one value by JSON Pointer from a full context, for example /task/contract/checks/0.' },
+        keysOnly: { type: 'boolean', description: 'List the keys of the object at pointer.' },
         since: { type: 'string', description: 'Return only records after this revision.' },
         maxChars: { type: 'integer', description: 'Context character budget for context/handoff.' },
         dryRun: { type: 'boolean', description: 'Validate without writing (init, rebuild, recover).' },

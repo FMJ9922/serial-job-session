@@ -57,7 +57,7 @@ python scripts/check_skill_integrity.py
 ```bash
 python scripts/sjs.py init --instance <project>/.cursor/workflows/demo --input examples/manual.json --dry-run
 python scripts/sjs.py init --instance <project>/.cursor/workflows/demo --input examples/manual.json
-python scripts/sjs.py context --instance <project>/.cursor/workflows/demo
+python scripts/sjs.py context --view recovery --instance <project>/.cursor/workflows/demo
 ```
 
 创建时集中确认：决策模式；条件自治的风险和评分门槛；失败处置；是否启用估分计时和飞书同步。用户已明确的项目不重复询问。缺失模式会返回选项，不自动套用默认。

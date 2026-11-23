@@ -29,6 +29,10 @@ def main(argv=None):
     parser.add_argument("--actor", default="orchestrator")
     parser.add_argument("--human", action="store_true", help="Use only for an actual human instruction, not agent self-approval")
     parser.add_argument("--role", default="orchestrator")
+    parser.add_argument("--view", choices=("full", "recovery"),
+                        help="context/handoff projection (default: full)")
+    parser.add_argument("--pointer", help="Return one value from full context using an RFC 6901 JSON Pointer")
+    parser.add_argument("--keys-only", action="store_true", help="Return only the selected object's keys")
     parser.add_argument("--domain")
     parser.add_argument("--host-session")
     parser.add_argument("--since", type=int)
@@ -39,6 +43,9 @@ def main(argv=None):
     parser.add_argument("--event", choices=("probe", "provision", "bind", "flush"), default="flush")
     args = parser.parse_args(argv)
     try:
+        if args.view is not None or args.pointer is not None or args.keys_only:
+            require(args.command in {"context", "handoff"}, "CONTEXT_OPTIONS_REQUIRE_READ_COMMAND")
+        require(not args.keys_only or args.pointer is not None, "KEYS_REQUIRE_POINTER")
         request = None
         if args.input:
             request = json.loads(sys.stdin.read()) if args.input == "-" else store.read_json(args.input)
@@ -52,11 +59,18 @@ def main(argv=None):
             require(request is not None, "INPUT_REQUIRED")
             result = store.apply_command(root, request)
         elif args.command in {"context", "handoff"}:
-            from sjs_context import build_context
-            if args.command == "handoff":
+            from sjs_context import build_context, project_pointer
+            view = args.view or "full"
+            if args.command == "handoff" and view == "full":
                 require(args.task_id is not None, "TASK_ID_REQUIRED")
-            result = build_context(store.load_snapshot(root), task_id=args.task_id, role=args.role, domain=args.domain,
-                                   host_session=args.host_session, since=args.since, max_chars=args.max_chars, handoff=args.command == "handoff")
+            require(args.pointer is None or view == "full", "POINTER_REQUIRES_FULL_VIEW")
+            # An explicit read view can inspect older v5 bindings before a human decides to rebind.
+            state = store.load_snapshot(root, verify_template=args.view is None and args.pointer is None)
+            result = build_context(state, task_id=args.task_id, role=args.role, domain=args.domain,
+                                   host_session=args.host_session, since=args.since, max_chars=args.max_chars,
+                                   handoff=args.command == "handoff", view=view)
+            if args.pointer is not None:
+                result = project_pointer(result, args.pointer, keys_only=args.keys_only)
         elif args.command == "start":
             require(args.task_id is not None, "TASK_ID_REQUIRED")
             state = store.load_snapshot(root)

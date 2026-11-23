@@ -211,6 +211,25 @@ class TemplateIdentityTests(unittest.TestCase):
 
 
 class TemplateRebindTests(WorkflowCase):
+    def test_explicit_cli_views_can_read_an_older_binding_without_rebinding(self):
+        with mock.patch.object(store, "template_identity", return_value={
+                "version": "5.2.2", "method": "older-method", "integrity": "older-installation"}):
+            self.init()
+            self.apply(create())
+        cli = [sys.executable, str(config.ROOT / "scripts/sjs.py"), "--instance", str(self.root), "--task-id", "a"]
+        for command in ("context", "handoff"):
+            recovered = json.loads(subprocess.check_output([*cli, command, "--view", "recovery"]))
+            self.assertTrue(recovered["rebind_required"])
+            self.assertFalse(recovered["dispatch"]["allowed"])
+            full = json.loads(subprocess.check_output([*cli, command, "--view", "full"]))
+            self.assertEqual(full["task"]["id"], "a")
+            self.assertEqual(full["revision"], recovered["revision"])
+        self.error("TEMPLATE_CHANGED", self.state)
+        start = subprocess.run([*cli, "start"], capture_output=True)
+        self.assertNotEqual(start.returncode, 0)
+        self.assertEqual(json.loads(start.stdout)["error"], "TEMPLATE_CHANGED")
+        self.assertEqual(store.load_snapshot(self.root, verify_template=False)["revision"], full["revision"])
+
     def test_version_only_change_does_not_require_rebind(self):
         self.init()
         stored = self.state()["config"]["template"]
@@ -574,6 +593,69 @@ class NestingAndContextTests(WorkflowCase):
         self.assertEqual(payload["constraints"], ["must retain this constraint"])
         self.assertIn("Observed behavior matches requirement", config.canonical(payload))
         self.assertTrue(any("OVER_BUDGET" in s for s in payload["warnings"]))
+
+    def test_recovery_selects_active_leaf_and_keeps_full_view_available(self):
+        self.init(constraints=["Keep the original input"], budget={"max_tasks": 3})
+        self.apply(create("parent", paths=["work"], tools=["shell"], resources=["editor"]))
+        self.assess("parent")
+        self.start("parent")
+        self.apply({"op": "nest", "task_id": "parent", "reason": "Independent deliverable"})
+        detail = "\n".join(["Historical preparation detail."] * 2000)
+        contract = {"goal": "Export a readable file", "checks": [
+            {"id": "parse", "description": "The reader opens the output"},
+            {"id": "sizes", "description": "The output fits the agreed limit"},
+        ], "method/archive~v1": {"old": detail}}
+        self.apply(create("leaf", parent_id="parent", contract=contract, parameters={"history": detail}))
+        self.assess("leaf")
+        self.start("leaf")
+        self.report("leaf")
+        self.apply({"op": "progress", "task_id": "leaf", "summary": "Reader result pending",
+                    "decisions": ["User explicitly paused. Stop dispatch."],
+                    "next_steps": ["Wait for the operator to resume"]})
+        state = self.state()
+        recovery = context.build_context(state, view="recovery", handoff=True)
+        self.assertEqual(recovery["task_id"], "leaf")
+        self.assertEqual(recovery["selection"]["reason"], "active_leaf")
+        self.assertEqual(recovery["task"]["contract"], {"goal": contract["goal"], "checks": contract["checks"]})
+        self.assertEqual(recovery["task"]["candidate"]["version"], "v1")
+        self.assertEqual(recovery["task"]["progress"]["summary"], "Reader result pending")
+        self.assertEqual(recovery["constraints"], ["Keep the original input"])
+        self.assertEqual(recovery["budget"]["max_tasks"], 3)
+        self.assertEqual(recovery["task"]["paths"], ["work"])
+        self.assertEqual(recovery["task"]["tools"], ["shell"])
+        self.assertEqual(recovery["task"]["resources"], ["editor"])
+        self.assertEqual(recovery["dispatch"]["status"], "review_pause")
+        self.assertFalse(recovery["dispatch"]["allowed"])
+        self.assertNotIn(detail, config.canonical(recovery))
+        self.assertLess(recovery["measurements"]["chars"], recovery["measurements"]["limit_chars"])
+        full = context.build_context(state, task_id="leaf", view="full")
+        self.assertEqual(full["task"]["contract"], contract)
+        pointer = "/task/contract/method~1archive~0v1"
+        self.assertIn(pointer, recovery["task"]["omitted_contract_pointers"])
+        self.assertEqual(context.project_pointer(full, pointer)["value"], {"old": detail})
+        self.assertEqual(full["parameters"]["history"], detail)
+        self.assertEqual(full, context.build_context(state, task_id="leaf"))
+
+    def test_recovery_requires_selection_for_parallel_leaves_and_keeps_pause(self):
+        self.init(limits={"max_parallel": 2})
+        self.apply(create("one", paths=["one"]), create("two", paths=["two"]))
+        for task_id in ("one", "two"):
+            self.assess(task_id)
+            self.start(task_id)
+        self.apply({"op": "set_parameters", "task_id": "two", "reason": "Operator requested pause",
+                    "parameters": {"recovery_pause": {"paused": True, "source": "operator message"}}})
+        state = self.state()
+        recovery = context.build_context(state, view="recovery", max_chars=100)
+        self.assertIsNone(recovery["task_id"])
+        self.assertEqual(recovery["selection"]["reason"], "multiple_active_leaves")
+        self.assertCountEqual(recovery["selection"]["active_leaf_ids"], ["one", "two"])
+        self.assertFalse(recovery["dispatch"]["allowed"])
+        self.assertTrue(any("OVER_BUDGET" in item for item in recovery["warnings"]))
+        paused = context.build_context(state, task_id="two", view="recovery", max_chars=100)
+        self.assertEqual(paused["dispatch"]["status"], "paused")
+        self.assertFalse(paused["dispatch"]["allowed"])
+        self.assertIn("operator message", config.canonical(paused["dispatch"]["sources"]))
+        self.assertEqual(paused["task"]["contract"]["checks"], state["tasks"]["two"]["contract"]["checks"])
 
     def test_progress_surfaces_in_context_and_terminal_tasks_reject_it(self):
         self.init()
