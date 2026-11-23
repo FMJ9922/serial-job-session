@@ -141,7 +141,7 @@ run 是创建参数；tasks 与 direction 是追加式事实记录；state 是�
 
 ## 接口与文档
 
-唯一日常 CLI：init / context / start / apply / handoff / check / rebuild / recover / stats / sync。支持 `--instance` 或通过注册表使用 `--route-key`，不全盘搜索实例。
+唯一日常 CLI：init / context / context-budget / start / apply / handoff / check / rebuild / recover / stats / sync。支持 `--instance` 或通过注册表使用 `--route-key`，不全盘搜索实例。`context-budget` 只读 Codex 线程历史，估算派发子 agent 前的上下文余量。派工以 75% 为目标、50%–100% 为可接受区间，最近 3 张同类已验收任务的中位数低于 50% 时重新审视后续任务卡，详见 [上下文余量估算](references/context-budget.md)。
 
 - [事件与命令示例、恢复](references/runtime.md)
 - [汇报协议与模板](references/reporting.md)

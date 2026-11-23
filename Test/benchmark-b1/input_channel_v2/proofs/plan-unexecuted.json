@@ -1,0 +1,30 @@
+{
+  "schema": "b1-input002-staging-plan-v1",
+  "unity": "2022.3.62f2",
+  "exe_product_version": "2022.3.62f2_7670c08855a9",
+  "project": "E:\\Test\\.benchmark-admin\\b1\\input-channel-002-neutral\\Project",
+  "output": "E:\\Test\\.benchmark-admin\\b1\\input-channel-002-neutral\\Evidence",
+  "namespace": "B1InputChannel002",
+  "company": "B1JudgeNeutral",
+  "product": "TypedKeyCode002Neutral",
+  "unity_exe": "E:\\Unity\\2021.3.36f2\\Editor\\Unity.exe",
+  "source_files": {
+    "NeutralConsumer.cs": "64d705593af9a52652f532bed5a8a45b078fb8cf26efe52a44d22c7a3980d2cc",
+    "NeutralEntry.cs": "858391b1b107091d08d0296aef042903cd5fc656bd217caa34e7d81b4104d0d6",
+    "NeutralRun.cs": "97ca9befa35b959bb80793ba4b86f9c7ab677677ba198e63c2a4a9f73c31c60d",
+    "offline_compile.py": "6dcef08c9150edf58cfcfcedfad412b551f28e2671993f78d5ca76a670e67844",
+    "README.md": "8d7d3b55e1ec55c09c5150b44ef1c8c570489a6c1c08405e3c428c5d0db7c078",
+    "stage_neutral.py": "c708c10e4ac82aca4b998559131bf498a30da3e960a980e519ae60ca5ea40256",
+    "test_stage_neutral.py": "bf7cab4ac072672017746cd06ec2b4eafb8d300f5ae753ae3ae36e982263f78e",
+    "TypedKeyChannel.cs": "47454121a72ad1a788facacfe0965da455ce73305165ad08647c00c965cb6109"
+  },
+  "source_manifest_sha256": "fc834de59a21cbce2543693d560a436450a537ea80557373a4ad563506136867",
+  "existing001_pins": {
+    "0Harmony.dll": "e96fc01100b6bbdc094b900efe47850cf97aa9df7c6a78cbe723b1decf5a506a",
+    "LICENSE": "a5883d0c45eb7e176d3d1631220e7f96e958e37064773d40245ae6db560bbd6d",
+    "LICENSE.package": "407ddd98200c9f17f49942b5a7791e288a2bd553b59bf2f462db87dbb21c50bc"
+  },
+  "coverage": "Unique defined KeyCode values: None < key < Mouse0; typed overloads only.",
+  "actual_calibration_run_performed": false,
+  "permission_scope": "Plan/materialize only. No Unity launch or input performed by this script."
+}

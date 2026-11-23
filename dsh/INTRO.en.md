@@ -24,7 +24,8 @@
 - **Append-only**: committed events are never rewritten; revisions are new events, and failure records stay.
 - **Disposable snapshot**: `state` is a projection — `check` validates it, `rebuild` recreates it.
 - **Lazy modules**: estimate timing and the Feishu mirror are off by default; while off, they perform no probing and no remote calls.
-- **One entry point**: `init / context / start / apply / handoff / check / rebuild / recover / stats / sync`.
+- **One entry point**: `init / context / context-budget / start / apply / handoff / check / rebuild / recover / stats / sync`.
+- **Context budgeting**: `context-budget` reads one Codex thread history in read-only mode and estimates remaining capacity before dispatching a subagent.
 
 ## Strengths
 

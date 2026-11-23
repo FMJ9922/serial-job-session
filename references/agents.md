@@ -4,6 +4,10 @@
 
 派工前运行 `context --task-id ID --role worker --domain ui --host-session 当前宿主会话ID`。返回职责、授权、合同、当前进展、依赖产物、相关经验和 reuse/spawn 建议。宿主必须确认 handle 仍有效，再使用已有协作工具续接，不重复创建并灌入所有历史。
 
+派工前还应运行 `context-budget` 或使用等价的核心接口。以可分配上下文的 75% 规划单次任务，50%–100% 视为可接受范围。最近 3 张同角色、同领域且已验收任务的利用率中位数低于 50% 时，下一批任务应重新审视业务量。窄批次、阻塞、失败和环境缺失要标记原因，不纳入低利用率调整。
+
+任务完成时记录 `context_budget` 的 planned、actual、group 和 `intentional_small` 字段，供后续中位数判断使用。实际利用率应包含任务提示、输出和主要工具结果的估算。
+
 `assign_role` 保存 slot、role、domain、handle、host_session。slot 是逻辑岗位，handle 是实际宿主 agent 标识。生命周期按宿主事实记录，不把逻辑岗位当成永不失效的进程。
 
 无匹配、跨领域、职责版本变化、句柄失效或重复误判时，新建角色会话并重新加载最小交接包。使用 `invalidate_role` 记录原因。压缩后也应重新取 context；跨宿主重启只保证落盘记录可恢复，不保证会话句柄可恢复。

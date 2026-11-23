@@ -24,7 +24,7 @@
 - **只追加、不改写**：已提交事件不修改，修订是新事件；失败记录保留。
 - **快照可丢弃**：`state` 只是投影，`check` 校验、`rebuild` 重建。
 - **模块按需加载**：估分计时、飞书镜像默认关闭；关闭时不探活、不访问远端。
-- **一个入口**：`init / context / start / apply / handoff / check / rebuild / recover / stats / sync`。
+- **一个入口**：`init / context / context-budget / start / apply / handoff / check / rebuild / recover / stats / sync`。
 
 ## 优点
 
@@ -57,6 +57,8 @@
 | 工具 `sjs` | 在会话工作目录调用 `scripts/sjs.py`，JSON 负载走 stdin，返回 CLI 的 JSON |
 | 参数面板 | 设置 → 串行任务（插件页也有一份），解释器 / 超时 / 额外参数 + 环境检测 + 只读信息 |
 | 本地 JSON 接口 | `GET /serial-job-session/api/state`、`POST /serial-job-session/api/settings`、`POST /serial-job-session/api/probe`（仅同源、要求 JSON 请求体） |
+
+`sjs` 还提供 `context-budget`。它读取指定 Codex 线程的本地历史并估算上下文余量，适合在派发子 agent 前检查任务是否接近窗口上限。派工以 75% 为目标、50%–100% 为可接受区间，并可根据最近 3 张同类已验收任务的中位数提示调整任务卡。当前线程 ID 由宿主提供时会自动使用，也可以显式传入 `threadId`。
 
 ## 注意事项
 

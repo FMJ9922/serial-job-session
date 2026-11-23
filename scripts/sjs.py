@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import sys
 import uuid
 from pathlib import Path
@@ -18,7 +19,7 @@ def emit(payload):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("init", "context", "start", "apply", "handoff", "check", "rebuild", "recover", "stats", "sync"))
+    parser.add_argument("command", choices=("init", "context", "context-budget", "start", "apply", "handoff", "check", "rebuild", "recover", "stats", "sync"))
     parser.add_argument("--instance")
     parser.add_argument("--route-key")
     parser.add_argument("--workspace")
@@ -35,6 +36,21 @@ def main(argv=None):
     parser.add_argument("--keys-only", action="store_true", help="Return only the selected object's keys")
     parser.add_argument("--domain")
     parser.add_argument("--host-session")
+    parser.add_argument("--thread-id", help="Codex thread id for context-budget")
+    parser.add_argument("--state-db", help="Read-only Codex state database override")
+    parser.add_argument("--history-db", help="Read-only Codex thread history database override")
+    parser.add_argument("--codex-home", help="Codex home directory override")
+    parser.add_argument("--model", help="Model slug used for context metadata")
+    parser.add_argument("--context-limit", type=int, help="Context window size in tokens")
+    parser.add_argument("--effective-percent", type=int, help="Usable context percentage")
+    parser.add_argument("--overhead-tokens", type=int, default=0, help="Known system/tool prompt overhead")
+    parser.add_argument("--reserve-tokens", type=int, default=16384, help="Output and safety reserve")
+    parser.add_argument("--task-output-tokens", type=int, default=8192, help="Expected subagent output tokens")
+    parser.add_argument("--task-tool-tokens", type=int, default=0, help="Expected tool-result tokens")
+    parser.add_argument("--target-utilization-percent", type=int, default=75)
+    parser.add_argument("--acceptable-min-percent", type=int, default=50)
+    parser.add_argument("--acceptable-max-percent", type=int, default=100)
+    parser.add_argument("--task-group")
     parser.add_argument("--since", type=int)
     parser.add_argument("--max-chars", type=int)
     parser.add_argument("--dry-run", action="store_true")
@@ -50,9 +66,65 @@ def main(argv=None):
         if args.input:
             request = json.loads(sys.stdin.read()) if args.input == "-" else store.read_json(args.input)
             require(isinstance(request, dict), "INPUT_OBJECT_REQUIRED")
-        require(args.instance or args.route_key, "INSTANCE_REQUIRED")
-        root = Path(args.instance).resolve() if args.instance else store.resolve_route(args.route_key, args.workspace)
-        if args.command == "init":
+        if args.command == "context-budget":
+            require(args.thread_id, "CONTEXT_THREAD_ID_REQUIRED")
+            import sjs_context_budget
+            task_text = ""
+            task_output_tokens = args.task_output_tokens
+            task_tool_tokens = args.task_tool_tokens
+            target_utilization_percent = args.target_utilization_percent
+            acceptable_min_percent = args.acceptable_min_percent
+            acceptable_max_percent = args.acceptable_max_percent
+            task_group = args.task_group
+            recent_tasks = None
+            if isinstance(request, dict):
+                task_text = request.get("task_text", request.get("taskText", ""))
+                require(isinstance(task_text, str), "CONTEXT_TASK_TEXT_INVALID")
+                task_output_tokens = request.get("task_output_tokens", request.get("taskOutputTokens", task_output_tokens))
+                task_tool_tokens = request.get("task_tool_tokens", request.get("taskToolTokens", task_tool_tokens))
+                target_utilization_percent = request.get("target_utilization_percent", request.get("targetUtilizationPercent", target_utilization_percent))
+                acceptable_min_percent = request.get("acceptable_min_percent", request.get("acceptableMinPercent", acceptable_min_percent))
+                acceptable_max_percent = request.get("acceptable_max_percent", request.get("acceptableMaxPercent", acceptable_max_percent))
+                require(all(isinstance(value, int) and value >= 0 for value in (
+                    task_output_tokens, task_tool_tokens, target_utilization_percent,
+                    acceptable_min_percent, acceptable_max_percent)),
+                        "CONTEXT_TOKEN_VALUE_INVALID")
+                recent_tasks = request.get("recent_tasks", request.get("recentTasks"))
+                require(recent_tasks is None or isinstance(recent_tasks, list), "CONTEXT_RECENT_TASKS_INVALID")
+                task_group = request.get("task_group", request.get("taskGroup", args.task_group))
+                require(task_group is None or isinstance(task_group, str), "CONTEXT_TASK_GROUP_INVALID")
+            else:
+                task_tool_tokens = args.task_tool_tokens
+                task_group = args.task_group
+            if recent_tasks is None and args.instance:
+                state = store.load_snapshot(Path(args.instance).resolve())
+                recent_tasks = sjs_context_budget.task_samples_from_state(state)
+            recent_tasks = recent_tasks or []
+            result = sjs_context_budget.estimate_context_budget(
+                thread_id=args.thread_id,
+                state_db=args.state_db,
+                history_db=args.history_db,
+                codex_home=args.codex_home,
+                model=args.model,
+                context_limit=args.context_limit,
+                effective_percent=args.effective_percent,
+                overhead_tokens=args.overhead_tokens,
+                reserve_tokens=args.reserve_tokens,
+                task_text=task_text,
+                task_output_tokens=task_output_tokens,
+                task_tool_tokens=task_tool_tokens,
+                target_utilization_percent=target_utilization_percent,
+                acceptable_min_percent=acceptable_min_percent,
+                acceptable_max_percent=acceptable_max_percent,
+                recent_tasks=recent_tasks,
+                task_group=task_group,
+            )
+        else:
+            require(args.instance or args.route_key, "INSTANCE_REQUIRED")
+            root = Path(args.instance).resolve() if args.instance else store.resolve_route(args.route_key, args.workspace)
+        if args.command == "context-budget":
+            pass
+        elif args.command == "init":
             require(args.instance and request is not None, "INSTANCE_AND_CONFIG_REQUIRED")
             result = store.initialize(root, request, dry_run=args.dry_run)
         elif args.command == "apply":
@@ -100,7 +172,7 @@ def main(argv=None):
     except SJSError as exc:
         emit({"ok": False, "error": exc.code, "message": str(exc), "details": exc.details})
         return 1
-    except (OSError, ValueError, TypeError, KeyError) as exc:
+    except (OSError, ValueError, TypeError, KeyError, sqlite3.Error) as exc:
         emit({"ok": False, "error": "INVALID_INPUT_OR_STORAGE", "message": str(exc)})
         return 1
 

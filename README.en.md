@@ -133,7 +133,7 @@ Estimates/timing and Feishu mirroring are optional. Disabled modules do not coll
 
 ## Commands and verification
 
-The daily CLI is `scripts/sjs.py`: init / context / start / apply / handoff / check / rebuild / recover / stats / sync. Routes use an explicit registry, never a search across all instances. API examples, recovery and the full operation list are in [runtime](references/runtime.md); the disclosure contract and templates are in [reporting](references/reporting.md); policies and modules are linked from [SKILL.md](SKILL.md).
+The daily CLI is `scripts/sjs.py`: init / context / context-budget / start / apply / handoff / check / rebuild / recover / stats / sync. Routes use an explicit registry, never a search across all instances. `context-budget` reads one Codex thread history in read-only mode and estimates remaining capacity before dispatching a subagent. Dispatch planning targets 75% utilization, accepts 50%–100%, and reviews later cards when the median of the latest three comparable accepted tasks is below 50%. API examples, recovery and the full operation list are in [runtime](references/runtime.md); the disclosure contract and templates are in [reporting](references/reporting.md); policies and modules are linked from [SKILL.md](SKILL.md).
 
 ```bash
 python -m unittest discover -s scripts -p "test*.py"

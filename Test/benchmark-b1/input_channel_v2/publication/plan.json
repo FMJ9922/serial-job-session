@@ -1,0 +1,67 @@
+{
+  "schema": "b1-input002-publication-plan-v1",
+  "status": "pending_independent_actual_run_approval_no_public_freeze",
+  "planned_public_freeze": "E:/Test/.benchmark-admin/b1/judge-input-channel-002",
+  "reusable_payload": [
+    {
+      "source": "E:\\github\\serial-job-session\\Test\\benchmark-b1\\input_channel_v2\\TypedKeyChannel.cs",
+      "public_path": "reusable/TypedKeyChannel.cs",
+      "sha256": "47454121a72ad1a788facacfe0965da455ce73305165ad08647c00c965cb6109"
+    },
+    {
+      "source": "E:\\Test\\.benchmark-admin\\b1\\judge-input-channel-001\\0Harmony.dll",
+      "public_path": "reusable/0Harmony.dll",
+      "sha256": "e96fc01100b6bbdc094b900efe47850cf97aa9df7c6a78cbe723b1decf5a506a"
+    },
+    {
+      "source": "E:\\Test\\.benchmark-admin\\b1\\judge-input-channel-001\\LICENSE",
+      "public_path": "reusable/LICENSE",
+      "sha256": "a5883d0c45eb7e176d3d1631220e7f96e958e37064773d40245ae6db560bbd6d"
+    },
+    {
+      "source": "E:\\Test\\.benchmark-admin\\b1\\judge-input-channel-001\\LICENSE.package",
+      "public_path": "reusable/LICENSE.package",
+      "sha256": "407ddd98200c9f17f49942b5a7791e288a2bd553b59bf2f462db87dbb21c50bc"
+    }
+  ],
+  "proof_only_never_import_into_formal_project": [
+    "NeutralEntry.cs",
+    "NeutralConsumer.cs",
+    "NeutralRun.cs",
+    "stage_neutral.py",
+    "offline_compile.py",
+    "neutral projects, fixtures, run reports and traces"
+  ],
+  "proof_origins": {
+    "first_failed_trial": "E:/Test/.benchmark-admin/b1/judge-evidence/input-channel002-first-run",
+    "first_failed_project": "E:/Test/.benchmark-admin/b1/input-channel-002-neutral/Project",
+    "revised_trial": "E:/Test/.benchmark-admin/b1/judge-evidence/input-channel002-attempt2-run",
+    "revised_project": "E:/Test/.benchmark-admin/b1/input-channel-002-neutral-attempt2/Project",
+    "independent_actual_run_review": "pending_root_and_independent_reviewer_final_artifact"
+  },
+  "availability_publication": {
+    "uniform_all_six": true,
+    "path_relative_to_blind": "evidence/judge-tooling-availability.json",
+    "toolpack_relative_to_blind": "evidence/judge-tooling/input002",
+    "may_not_write": [
+      "candidate/",
+      "frozen prompt.md and rubric/fixtures",
+      "sealed submissions",
+      "baseline manifests"
+    ],
+    "same_package_manifest_sha256_required": true
+  },
+  "capability_scope": "Typed KeyCode GetKey/GetKeyDown/GetKeyUp, unique defined None<key<Mouse0, one key at a time dynamically observed only; exact actual coverage must come from approved report",
+  "not_approved": [
+    "key chords",
+    "Input(string)",
+    "anyKey",
+    "axes",
+    "Input System",
+    "mouse/joystick",
+    "OS keyboard/cursor/focus",
+    "business state setters or substitute callbacks",
+    "business scoring based on calibration alone"
+  ],
+  "integration": "Only explicitly journaled new Assets/__B1Audit adapter and approved reusable channel/DLL. No NeutralEntry/Consumer/Run import, no original code changes. Original game Update/capture/UI must consume and produce observable evidence."
+}

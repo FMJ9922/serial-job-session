@@ -71,6 +71,7 @@ const PROVIDER = name
 const COMMANDS = [
   'init',
   'context',
+  'context-budget',
   'start',
   'apply',
   'handoff',
@@ -320,6 +321,21 @@ export function buildArgs(args, usesStdin, settingsExtraArgs) {
   push('--role', args.role)
   push('--domain', args.domain)
   push('--host-session', args.hostSession)
+  push('--thread-id', args.threadId)
+  push('--state-db', args.stateDb)
+  push('--history-db', args.historyDb)
+  push('--codex-home', args.codexHome)
+  push('--model', args.model)
+  push('--context-limit', args.contextLimit)
+  push('--effective-percent', args.effectivePercent)
+  push('--overhead-tokens', args.overheadTokens)
+  push('--reserve-tokens', args.reserveTokens)
+  push('--task-output-tokens', args.taskOutputTokens)
+  push('--task-tool-tokens', args.taskToolTokens)
+  push('--target-utilization-percent', args.targetUtilizationPercent)
+  push('--acceptable-min-percent', args.acceptableMinPercent)
+  push('--acceptable-max-percent', args.acceptableMaxPercent)
+  push('--task-group', args.taskGroup)
   push('--view', args.view)
   if (typeof args.pointer === 'string') argv.push('--pointer', args.pointer)
   if (args.keysOnly === true) argv.push('--keys-only')
@@ -604,6 +620,7 @@ export function describeCall(args) {
   const base = `sjs ${command}`.trim()
   if (command === 'init') return `${base} · ${args.dryRun === true ? '预检创建' : '创建实例'}`
   if (command === 'context') return `${base} · 读取当前任务`
+  if (command === 'context-budget') return `${base} · 估算上下文余量`
   if (command === 'start') return `${base} · 任务 ${args.taskId ?? '?'}`
   if (command === 'handoff') return `${base} · 任务 ${args.taskId ?? '?'}`
   if (command === 'check') return `${base} · 校验实例`
@@ -974,6 +991,7 @@ function buildTool(ctx) {
           enum: COMMANDS,
           description:
             'init (create an instance, usually with dryRun first), context (read the bounded menu and current card), ' +
+            'context-budget (estimate the selected Codex thread context remaining for a subagent task), ' +
             'start, apply (one command with operations), handoff, check (replay and validate), rebuild (reset the snapshot), ' +
             'recover (drop an uncommitted tail), stats, sync (optional module flush).',
         },
@@ -989,7 +1007,7 @@ function buildTool(ctx) {
           type: 'object',
           description:
             'JSON payload the command expects (init run config, or an apply command with command_id, ' +
-            'expected_revision, actor and operations). Sent on stdin as `--input -`.',
+            'expected_revision, actor and operations). For context-budget it may contain task_text, task_tool_tokens and recent_tasks. Sent on stdin as `--input -`.',
         },
         workspace: { type: 'string', description: 'Workspace root override for the CLI.' },
         taskId: { type: 'string', description: 'Task id for start, report, accept and related commands.' },
@@ -1006,6 +1024,21 @@ function buildTool(ctx) {
         role: { type: 'string', description: 'Role context to load (orchestrator, worker, reviewer, ...).' },
         domain: { type: 'string', description: 'Domain context to load.' },
         hostSession: { type: 'string', description: 'Host session id used for role reuse.' },
+        threadId: { type: 'string', description: 'Codex thread id for context-budget. The host may infer the current thread.' },
+        stateDb: { type: 'string', description: 'Read-only Codex state database override for context-budget.' },
+        historyDb: { type: 'string', description: 'Read-only Codex thread history database override for context-budget.' },
+        codexHome: { type: 'string', description: 'Codex home directory override for context-budget.' },
+        model: { type: 'string', description: 'Model slug override for context-budget metadata.' },
+        contextLimit: { type: 'integer', description: 'Context window size in tokens for context-budget.' },
+        effectivePercent: { type: 'integer', description: 'Usable context percentage for context-budget.' },
+        overheadTokens: { type: 'integer', description: 'Known system and tool prompt overhead.' },
+        reserveTokens: { type: 'integer', description: 'Output and safety reserve.' },
+        taskOutputTokens: { type: 'integer', description: 'Expected subagent output tokens.' },
+        taskToolTokens: { type: 'integer', description: 'Expected tool-result tokens.' },
+        targetUtilizationPercent: { type: 'integer', description: 'Target task utilization percentage, default 75.' },
+        acceptableMinPercent: { type: 'integer', description: 'Minimum acceptable task utilization percentage, default 50.' },
+        acceptableMaxPercent: { type: 'integer', description: 'Maximum acceptable task utilization percentage, default 100.' },
+        taskGroup: { type: 'string', description: 'Comparable task group used for the recent median check.' },
         view: { type: 'string', enum: ['recovery', 'full'], description: 'Use recovery for a concise handoff. Full is the original context format.' },
         pointer: { type: 'string', description: 'Read one value by JSON Pointer from a full context, for example /task/contract/checks/0.' },
         keysOnly: { type: 'boolean', description: 'List the keys of the object at pointer.' },
@@ -1063,7 +1096,18 @@ function buildTool(ctx) {
       const settings = readSettings()
       const hasInput = args.input !== undefined && args.input !== null
       const stdin = hasInput ? JSON.stringify(args.input) : undefined
-      const argv = buildArgs(args, hasInput, settings.extraArgs)
+      const inferredThreadId =
+        args.threadId ||
+        exec?.threadId ||
+        exec?.thread_id ||
+        exec?.sessionId ||
+        exec?.session_id ||
+        process.env.CODEX_THREAD_ID
+      const argv = buildArgs(
+        inferredThreadId ? { ...args, threadId: inferredThreadId } : args,
+        hasInput,
+        settings.extraArgs,
+      )
       const cwd = await resolveWorkingDirectory(ctx, exec)
       const timeoutMs = Number(process.env.SJS_TIMEOUT_MS) || settings.timeoutMs || DEFAULT_TIMEOUT_MS
       const interpreter = await resolveInterpreter(pythonCandidates(settings), exec.signal, timeoutMs)

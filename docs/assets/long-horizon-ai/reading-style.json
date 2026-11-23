@@ -1,0 +1,144 @@
+{
+  "palette": {
+    "concept": {
+      "meaning": "核心概念",
+      "feishu_background": 5
+    },
+    "method": {
+      "meaning": "方法原则",
+      "feishu_background": 4
+    },
+    "boundary": {
+      "meaning": "限制与风险",
+      "feishu_background": 3
+    }
+  },
+  "annotations": [
+    {
+      "block_id": "doxcnlXqTREN46XORE9Pp27e0bd",
+      "phrase": "执行之间的依赖",
+      "category": "concept",
+      "background_color": 5
+    },
+    {
+      "block_id": "doxcnea3HLdJnFw6pTZv9hjDpp9",
+      "phrase": "跨步骤的状态依赖",
+      "category": "concept",
+      "background_color": 5
+    },
+    {
+      "block_id": "doxcnWxt1PNeRXlMTcsJn1ApRwe",
+      "phrase": "历史与当前状态",
+      "category": "concept",
+      "background_color": 5
+    },
+    {
+      "block_id": "doxcn7P0G5EYUTPVKpWRxbhsD9c",
+      "phrase": "确认当前依据，再按需追溯",
+      "category": "method",
+      "background_color": 4
+    },
+    {
+      "block_id": "doxcnp1aJBVFc0vMBqsgMKpyE3x",
+      "phrase": "任务合同",
+      "category": "concept",
+      "background_color": 5
+    },
+    {
+      "block_id": "doxcnj7uV9hA8ffobNPSCIIjqGg",
+      "phrase": "集成和最终交付验证",
+      "category": "method",
+      "background_color": 4
+    },
+    {
+      "block_id": "doxcnmMcBudzPJdUlAnXd98twgb",
+      "phrase": "候选",
+      "category": "concept",
+      "background_color": 5
+    },
+    {
+      "block_id": "doxcnxO0AZzbukrGANYsunj9i5d",
+      "phrase": "要求版本、产物版本和证据",
+      "category": "concept",
+      "background_color": 5
+    },
+    {
+      "block_id": "doxcnLWRJQERbKmQIrViFI6YMkd",
+      "phrase": "不能抵消关键条件尚未验证的事实",
+      "category": "boundary",
+      "background_color": 3
+    },
+    {
+      "block_id": "doxcnglMP49yqTE5foVOlr5cHBz",
+      "phrase": "角色分开不保证判断正确",
+      "category": "boundary",
+      "background_color": 3
+    },
+    {
+      "block_id": "doxcnqE1S8jr0AwBex2rVhxb5fb",
+      "phrase": "未完成义务应由后续任务明确承接",
+      "category": "method",
+      "background_color": 4
+    },
+    {
+      "block_id": "doxcnNBlwO3kRug53DHEqXCl8Oe",
+      "phrase": "真实环境验证仍然未知",
+      "category": "boundary",
+      "background_color": 3
+    },
+    {
+      "block_id": "doxcnjmg2d2mWQKPFPoqP92uFvd",
+      "phrase": "新合同是否真正承接原要求则需要语义判断",
+      "category": "boundary",
+      "background_color": 3
+    },
+    {
+      "block_id": "doxcnX1oDil4mVPGH9JFuN7SAqg",
+      "phrase": "提前约定这些边界",
+      "category": "method",
+      "background_color": 4
+    },
+    {
+      "block_id": "doxcnnzLZ2vjtPX9agcqAUbH9Bg",
+      "phrase": "这不等于获得成功保证",
+      "category": "boundary",
+      "background_color": 3
+    },
+    {
+      "block_id": "doxcnndbSktZHYiW1megM1sYvKe",
+      "phrase": "为交接保留当前依据。",
+      "category": "method",
+      "background_color": 4
+    },
+    {
+      "block_id": "doxcnoAd11DEQwbFw7bglTsjmEV",
+      "phrase": "为完成声明设置检查条件。",
+      "category": "method",
+      "background_color": 4
+    },
+    {
+      "block_id": "doxcnt2aoj1wS2qayFodVMcg1Qc",
+      "phrase": "为变化与失败保留承接规则。",
+      "category": "method",
+      "background_color": 4
+    },
+    {
+      "block_id": "doxcntoaPfNW3OBxjc69WnzN5je",
+      "phrase": "为人的参与提供明确模式。",
+      "category": "method",
+      "background_color": 4
+    },
+    {
+      "block_id": "doxcnJFvKqrpjRYsim0dgiDHXJs",
+      "phrase": "不能自动证明证据真实、测试充分或新合同完整覆盖旧义务",
+      "category": "boundary",
+      "background_color": 3
+    },
+    {
+      "block_id": "doxcnIIU3bWwndRcV9SPNfGPjEf",
+      "phrase": "不能替代插件自身的效果证据",
+      "category": "boundary",
+      "background_color": 3
+    }
+  ]
+}

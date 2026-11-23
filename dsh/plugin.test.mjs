@@ -313,6 +313,7 @@ test('the tool schema exposes every v5 subcommand and the shared options', () =>
   assert.deepEqual(parameters.properties.command.enum, [
     'init',
     'context',
+    'context-budget',
     'start',
     'apply',
     'handoff',
@@ -322,7 +323,7 @@ test('the tool schema exposes every v5 subcommand and the shared options', () =>
     'stats',
     'sync',
   ])
-  for (const key of ['instance', 'routeKey', 'input', 'dryRun', 'human', 'extraArgs']) {
+  for (const key of ['instance', 'routeKey', 'input', 'dryRun', 'human', 'extraArgs', 'threadId', 'contextLimit', 'taskOutputTokens', 'taskToolTokens', 'targetUtilizationPercent', 'acceptableMinPercent', 'acceptableMaxPercent', 'taskGroup']) {
     assert.ok(parameters.properties[key], `missing parameter ${key}`)
   }
   assert.deepEqual(parameters.properties.view.enum, ['recovery', 'full'])
@@ -333,6 +334,8 @@ test('the tool schema exposes every v5 subcommand and the shared options', () =>
   assert.deepEqual(buildArgs({ command: 'handoff', view: 'recovery' }, false), ['--view', 'recovery', 'handoff'])
   assert.deepEqual(buildArgs({ command: 'context', view: 'full', pointer: '/task/contract' }, false),
     ['--view', 'full', '--pointer', '/task/contract', 'context'])
+  assert.deepEqual(buildArgs({ command: 'context-budget', threadId: 'thread-1', contextLimit: 1000, taskOutputTokens: 20 }, false),
+    ['--thread-id', 'thread-1', '--context-limit', '1000', '--task-output-tokens', '20', 'context-budget'])
 })
 
 test('argv puts options before the subcommand and maps booleans to flags', () => {
